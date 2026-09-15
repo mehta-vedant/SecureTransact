@@ -19,7 +19,7 @@ public class FraudBlacklist {
     @Column(nullable = false)
     private BlacklistType type;
 
-    @Column(nullable = false)
+    @Column(name = "blacklist_value", nullable = false)
     private String value;
 
     private String reason;

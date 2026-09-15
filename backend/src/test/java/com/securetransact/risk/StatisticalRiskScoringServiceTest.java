@@ -130,6 +130,27 @@ class StatisticalRiskScoringServiceTest {
     }
 
     @Test
+    void shouldFlagBlacklistedDestinationAccount() {
+        enableDefaultRules();
+        when(blacklistRepository.existsByTypeAndValueAndActiveTrue(
+                eq(BlacklistType.ACCOUNT_NUMBER), anyString())).thenReturn(false);
+        when(blacklistRepository.existsByTypeAndValueAndActiveTrue(
+                eq(BlacklistType.ACCOUNT_NUMBER), eq("ACC-BLOCKED"))).thenReturn(true);
+        when(behaviorProfileRepository.findByUserId(anyLong())).thenReturn(Optional.empty());
+        when(transactionRepository.countRecentTransactions(anyLong(), any())).thenReturn(0L);
+
+        smallTransaction.setToAccount(Account.builder()
+                .accountNumber("ACC-BLOCKED")
+                .build());
+
+        RiskScoringResult result = scoringService.scoreTransaction(smallTransaction, testAccount);
+
+        assertTrue(result.getTotalScore() >= 50);
+        assertTrue(result.getFactors().stream()
+                .anyMatch(f -> f.getCode().equals("BLACKLISTED_DEST_ACCOUNT")));
+    }
+
+    @Test
     void shouldScoreMultipleFactorsCumulatively() {
         enableDefaultRules();
         when(blacklistRepository.existsByTypeAndValueAndActiveTrue(any(), anyString())).thenReturn(false);
