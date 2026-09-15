@@ -29,7 +29,7 @@ public class UserBehaviorProfile {
     @Column(nullable = false)
     private int totalTransactionCount;
 
-    @Column(nullable = false)
+    @Column(name = "transactions_last_24h", nullable = false)
     private int transactionsLast24h;
 
     @Column(nullable = false)

@@ -8,6 +8,7 @@ import com.securetransact.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -31,11 +32,12 @@ public class AdminDashboardControllerV1 {
     @Operation(summary = "List all accounts")
     public ResponseEntity<PaginatedResponse<AccountResponse>> listAccounts(
             @PageableDefault(size = 20) Pageable pageable) {
+        Page<AccountResponse> accounts = adminService.getAllAccounts(pageable);
         return ResponseEntity.ok(new PaginatedResponse<>(
-                adminService.getAllAccounts(pageable).getContent().stream()
-                        .map(AccountResponse::from).toList(),
+                accounts.getContent(),
                 pageable.getPageNumber(), pageable.getPageSize(),
-                0, 0, true, true));
+                accounts.getTotalElements(), accounts.getTotalPages(),
+                accounts.isFirst(), accounts.isLast()));
     }
 
     @GetMapping("/audit-events")
