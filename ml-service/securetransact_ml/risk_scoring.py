@@ -3,7 +3,7 @@
 Exposes POST /score that accepts a transaction feature vector and
 returns a risk score (0-100) with a decision (ALLOW / HOLD_FOR_REVIEW / BLOCK).
 
-The Java RemoteRiskScoringClient calls this endpoint.
+Standalone endpoint — not currently called by the Java backend.
 """
 from __future__ import annotations
 

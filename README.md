@@ -25,7 +25,7 @@ User submits transaction
 │  │ Behavioral Profile │  │     Rolling mean/stddev per user, z-score anomaly,
 │  │ (async, cached)    │     │     typical hours analysis
 │  ├────────────────────┤  │
-│  │ Blacklist Checks   │  │     Account, email, IP, card number
+│  │ Blacklist Checks   │  │     Account number, email, IP, user ID
 │  ├────────────────────┤  │
 │  │ Velocity Anomaly   │  │     Transactions/hour, rapid-transfer patterns
 │  ├────────────────────┤  │
@@ -58,7 +58,7 @@ User submits transaction
          ▼
 ┌──────────────────────────┐
 │  PostgreSQL + Flyway     │  ── ACID-compliant persistence
-│                          │     Versioned migrations (V1, V2)
+│                          │     Versioned migrations (V1, V2, V3)
 └──────────────────────────┘
 ```
 
@@ -92,7 +92,7 @@ All rules are **database-configurable** via `FraudRuleConfig` — thresholds, we
 ```
 CREATED → RISK_EVALUATED → APPROVED → HELD_FOR_REVIEW → SETTLED
                         ↘                    ↘
-                         → REJECTED           → FAILED / REVERSED
+                         → REJECTED           → FAILED
 ```
 
 | Status | Meaning |
@@ -104,7 +104,6 @@ CREATED → RISK_EVALUATED → APPROVED → HELD_FOR_REVIEW → SETTLED
 | `SETTLED` | Funds transferred (final success state) |
 | `REJECTED` | Blocked by risk engine or admin |
 | `FAILED` | Insufficient funds or processing error |
-| `REVERSED` | Previously settled transaction reversed |
 
 ## Risk Case Management
 
@@ -131,18 +130,18 @@ public Transaction createTransaction(...) { ... }
 
 Audited events include: account creation, status changes, transaction lifecycle, fraud reviews, login/logout. Each event records: who, what, when, resource type/id, IP address, and arbitrary JSON details.
 
-## Python ML Service
+## Python ML Service (standalone)
 
-A standalone Flask service providing statistical anomaly detection via scikit-learn:
+A self-contained Flask + scikit-learn service for *experimental* anomaly detection, kept isolated from the live transaction path:
 
 | Component | Description |
-|-----------|-------------|
+|-----------|--------------|
 | **IsolationForest** | Trained on synthetic transaction data (11-dim feature vector) |
-| **Feature extraction** | Mirrors the Java `RiskFeatureExtractor` for consistency |
-| **REST API** | `POST /score` → `{ riskScore: 0-100, decision: ALLOW\|HOLD_FOR_REVIEW\|BLOCK }` |
-| **Docker ready** | Auto-trains model on build |
+| **Feature extraction** | Mirrors the Java features (amount, hour, velocity, z-score...) |
+| **REST API** | `POST /score` → `{ riskScore: 0-100, decision, modelVersion }` |
+| **Serving** | Flask on :5001, Docker-ready (auto-trains model on build) |
 
-The Java backend can call this via `RemoteRiskScoringClient` (RestTemplate) — swap between Java-only and Python scoring by changing configuration.
+**Integration status:** the Java engine (`StatisticalRiskScoringService`) is fully self-contained and is the *single* source of scoring truth in the request path. `ml-service` is a research/tooling sidecar for experimenting with the same concepts; if you want to use its output as a second signal, hook it in at `RiskEngineService` (front-door of the risk pipeline).
 
 ## Tech Stack
 
@@ -198,8 +197,7 @@ PATCH  /api/v1/admin/risk-cases/{id}/assign     Assign case to current admin
 PATCH  /api/v1/admin/risk-cases/{id}/decision   Make BLOCK/APPROVE decision
 
 GET    /api/v1/admin/fraud-rules         List all fraud rule configs
-POST   /api/v1/admin/fraud-rules         Create new rule config
-PUT    /api/v1/admin/fraud-rules/{id}    Update rule config
+PUT    /api/v1/admin/fraud-rules/{id}    Update rule config (weight/threshold/enabled)
 ```
 
 ### ML Service (Python, port 5001)
@@ -231,10 +229,7 @@ SecureTransact/
 │       │   ├── RiskEngineService.java        Orchestrates all risk checks
 │       │   ├── StatisticalRiskScoringService.java  Policy rules + behavioral + blacklist
 │       │   ├── RiskDecisionEngine.java       Score → decision mapping
-│       │   ├── BehavioralProfileService.java Rolling stats per user (async)
-│       │   ├── RiskFeatureExtractor.java     Feature vector builder
-│       │   ├── RiskScoringClient.java        Interface for swappable scoring backends
-│       │   └── RemoteRiskScoringClient.java  Python ML service client
+│       │   └── BehavioralProfileService.java Rolling stats per user (async) ───┐
 │       ├── audit/
 │       │   ├── Auditable.java                Method-level annotation
 │       │   └── AuditAspect.java              AOP aspect, records every @Auditable call
@@ -315,11 +310,11 @@ mvn test
 **Config-driven risk rules over hardcoded rules.**
 Rules are stored in `fraud_rule_configs` and evaluated at runtime. Thresholds and weights can be tuned via API without redeployment — essential for adapting to new fraud patterns.
 
-**Java-first with optional Python ML.**
-The Java `StatisticalRiskScoringService` provides full risk scoring without external dependencies. The Python service is an optional add-on for teams that want to experiment with scikit-learn models. The `RiskScoringClient` interface makes swapping trivial.
+**Java-first, single decision engine.**
+The Java `StatisticalRiskScoringService` is the only scoring path in production flow — no external runtime dependencies, fully testable. A standalone Python sidecar (`ml-service`) lets teams prototype model swaps without touching the transaction path.
 
 **Behavioral profiling via streaming statistics.**
-Instead of storing every transaction, `BehavioralProfileService` maintains a rolling mean and standard deviation using Welford's online algorithm. This gives z-score anomaly detection with O(1) memory per user.
+Instead of storing every transaction, `BehavioralProfileService` maintains a rolling mean and standard deviation using an online (Welford-style) update, asynchronously after each transaction. This gives z-score anomaly detection with O(1) memory per user.
 
 **Risk cases for human-in-the-loop review.**
 Automated scoring handles 90%+ of transactions. The remaining edge cases go to `RiskCaseService` where trained analysts make the final call — matching how real fraud operations teams work.

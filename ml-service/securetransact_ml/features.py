@@ -1,7 +1,8 @@
 """Feature extraction for ML risk scoring.
 
-Mirrors the Java RiskFeatureExtractor — extracts the same feature vector
-so both engines can be swapped at runtime via configuration.
+Defines the feature vector consumed by the Flask /score endpoint.
+The Java backend's decision engine is self-contained; these features are a
+standalone replica used by the ML experiment (see ml-service/README).
 """
 from __future__ import annotations
 

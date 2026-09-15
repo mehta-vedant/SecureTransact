@@ -5,14 +5,16 @@ Python-based statistical anomaly detection service using scikit-learn's Isolatio
 ## Architecture
 
 ```
-Java Backend (RemoteRiskScoringClient)
-    ↓ REST
-Flask API (POST /score)
+Standalone Flask API  (POST /score)   ← called directly by clients / for experimentation
     ↓
 IsolationForest + StandardScaler
     ↓
 { riskScore: 0-100, decision: ALLOW|HOLD_FOR_REVIEW|BLOCK }
 ```
+
+> Note: this service is not wired into the Java backend's live decision path. The Java
+> risk engine (`StatisticalRiskScoringService`) is self-contained; this ML scorer is kept
+> as a standalone experiment.
 
 ## Running Locally
 
