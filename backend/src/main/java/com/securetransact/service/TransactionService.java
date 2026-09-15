@@ -71,6 +71,7 @@ public class TransactionService {
                 .status(TransactionStatus.CREATED)
                 .idempotencyKey(request.getIdempotencyKey())
                 .description(request.getDescription())
+                .crossBorder(request.getCrossBorder() != null && request.getCrossBorder())
                 .build();
 
         try {

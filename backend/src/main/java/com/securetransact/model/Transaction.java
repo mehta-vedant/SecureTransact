@@ -42,6 +42,9 @@ public class Transaction {
 
     private String description;
 
+    @Column(name = "is_cross_border", nullable = false)
+    private boolean crossBorder;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

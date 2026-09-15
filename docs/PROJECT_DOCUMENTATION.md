@@ -39,8 +39,9 @@ Transaction submission flow:
         → HOLD_REVIEW  → HELD_FOR_REVIEW + risk case created
         → BLOCK        → REJECTED
 
-Optional sidecar (not in the request path):
-  [ Python Flask ML :5001 ]  IsolationForest anomaly scorer — standalone/experimental
+Optional soft-signal sidecar:
+  [ Python Flask ML :5001 ]  IsolationForest anomaly scorer — wired in, 500ms timeout,
+                             silent-degrades to statistical-only when down
 ```
 
 ## 2. Tech Stack
@@ -48,7 +49,7 @@ Optional sidecar (not in the request path):
 | Layer | Technology |
 |---|---|
 | Backend | Java 17, Spring Boot 3.2.5, Spring Security, Spring Data JPA, Bean Validation |
-| Database | PostgreSQL, Flyway 11.x (V1–V3), `ddl-auto: validate` |
+| Database | PostgreSQL, Flyway 11.x (V1–V5), `ddl-auto: validate` |
 | Auth | JWT (JJWT 0.12.x), BCrypt, httpOnly cookie + Bearer fallback |
 | API docs | SpringDoc OpenAPI `/swagger-ui.html` (opt-in flag) |
 | Frontend | React 18, Vite, React Router, Tailwind, Framer Motion, Recharts, Lucide |
@@ -141,6 +142,9 @@ CSRF-exempt: `/api/auth/**`. Token is never returned in the body (XSS hardening)
 | PATCH  | `/api/v1/admin/risk-cases/{id}/decision` | BLOCK / ALLOW / HOLD_FOR_REVIEW + notes |
 | GET    | `/api/v1/admin/fraud-rules` | All rule configs |
 | PUT    | `/api/v1/admin/fraud-rules/{id}` | Toggle/weight/threshold update at runtime |
+| GET    | `/api/v1/admin/blacklist` | Blacklist entries (filter: `type`, `active`) |
+| POST   | `/api/v1/admin/blacklist` | Add/re-activate a blacklist entry |
+| DELETE | `/api/v1/admin/blacklist/{id}` | Deactivate a blacklist entry |
 | GET    | `/api/v1/admin/audit-events` | Paginated audit log |
 | GET    | `/api/v1/admin/audit-events/by-action/{action}` | Filter by action |
 | GET    | `/api/v1/admin/audit-events/by-resource/{type}/{id}` | Filter by resource |
@@ -263,22 +267,27 @@ Environment variables (see `application.yml`): `SPRING_DATASOURCE_URL/USERNAME/P
 Run: `psql -c "CREATE DATABASE securetransact"` → `cd backend && mvn spring-boot:run`
 → `cd frontend && npm install && npm run dev`. Optional ML sidecar:
 `cd ml-service && pip install -r requirements.txt && python -m securetransact_ml.train_model`
-then `python -m securetransact_ml.risk_scoring` (:5001).
+then `python -m securetransact_ml.risk_scoring` (:5001). When it's up, the risk engine
+blends its anomaly score in automatically (`app.ml.enabled=true` by default; disable or
+point elsewhere via `APP_ML_ENABLED` / `APP_ML_BASE_URL` / `APP_ML_TIMEOUT_MS`).
 
 ## 11. Testing
 
-22 tests / 4 suites — `mvn test` (H2, Flyway disabled):
+31 tests / 6 suites — `mvn test` (H2, Flyway disabled):
 - `AuthControllerTest` (5) — register duplicate/login/invalid flows
-- `StatisticalRiskScoringServiceTest` (6) — policy rules, blacklist, velocity, temporal
+- `StatisticalRiskScoringServiceTest` (7) — policy rules, blacklist, velocity, temporal
 - `AuditServiceTest` (5) — audit recording + filtering
 - `RiskCaseServiceTest` (6) — create/assign/approve(sets transaction to SETTLED)/block/escalate/not-found
+- `RiskEngineServiceTest` (5) — ML boost blend, cap, fallback, and no-double-count (ML disabled)
+- `RiskScoringClientTest` (3) — HTTP contract via `MockRestServiceServer` (200 / 5xx / disabled)
 
 ## 12. Key Design Decisions
 
 - **Config-driven rules over hardcoded rules** — fraud rules live in the DB and can be tuned at
   runtime (no redeploy), matching how real Ops teams adapt to new fraud patterns.
-- **Self-contained Java decision engine** — no external scoring dependency in the request path;
-  the Python ML sidecar stays an isolated experiment.
+- **Self-contained Java decision engine** — `StatisticalRiskScoringService` is the authoritative
+  scoring path (no external dependency). The Python ML sidecar is an *optional soft signal*:
+  wired in with a 500ms timeout, blended into the total, and silent-degraded on any failure.
 - **Streaming behavior profiles** — online mean/variance per user (O(1) memory) rather than
   storing all historical transactions.
 - **Human-in-the-loop risk cases** — automation handles low/medium risk; edge cases reach analysts

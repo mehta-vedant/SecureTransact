@@ -31,6 +31,10 @@ app:
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
+  ml:
+    enabled: ${APP_ML_ENABLED:true}
+    base-url: ${APP_ML_BASE_URL:http://localhost:5001}
+    timeout-ms: ${APP_ML_TIMEOUT_MS:500}
   swagger-enabled: ${APP_SWAGGER_ENABLED:false}
 
 server:

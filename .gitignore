@@ -24,3 +24,8 @@ frontend/.env
 
 # Logs
 *.log
+
+# Python (ml-service)
+ml-service/models/*.pkl
+__pycache__/
+*.pyc

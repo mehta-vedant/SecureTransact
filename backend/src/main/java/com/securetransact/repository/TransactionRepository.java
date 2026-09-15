@@ -32,6 +32,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.toAccount.id = :toAccountId AND t.fromAccount.id = :fromAccountId AND t.createdAt > :since")
     long countRecentTransfersToAccount(@Param("fromAccountId") Long fromAccountId, @Param("toAccountId") Long toAccountId, @Param("since") LocalDateTime since);
 
+    // For fraud detection ML features: distinct recipients from an account within a window
+    @Query("SELECT COUNT(DISTINCT t.toAccount.id) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.toAccount.id IS NOT NULL AND t.createdAt > :since")
+    long countDistinctRecipientsSince(@Param("fromAccountId") Long fromAccountId, @Param("since") LocalDateTime since);
+
+    // For fraud detection ML features: average amount sent from an account since a point in time
+    @Query("SELECT COALESCE(AVG(t.amount), 0) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.createdAt > :since")
+    BigDecimal avgAmountSince(@Param("fromAccountId") Long fromAccountId, @Param("since") LocalDateTime since);
+
+    // For fraud detection ML features: has this recipient ever received a transfer from this account
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.toAccount.id = :toAccountId")
+    long countTransfersToAccount(@Param("fromAccountId") Long fromAccountId, @Param("toAccountId") Long toAccountId);
+
     // Dashboard metrics
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.createdAt > :since")
     long countTransactionsSince(@Param("since") LocalDateTime since);

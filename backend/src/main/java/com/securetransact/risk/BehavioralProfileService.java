@@ -77,6 +77,14 @@ public class BehavioralProfileService {
         profile.setHasBaseline(newCount >= 5);
         profile.setLastUpdated(LocalDateTime.now());
 
+        if (sourceAccount.getId() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            profile.setTransactionsLast24h((int) transactionRepository
+                    .countRecentTransactions(sourceAccount.getId(), now.minusHours(24)));
+            profile.setTransactionsLastHour((int) transactionRepository
+                    .countRecentTransactions(sourceAccount.getId(), now.minusHours(1)));
+        }
+
         profileRepository.save(profile);
         log.debug("Updated behavioral profile for user {}: avg={}, stddev={}, count={}",
                 userId, newAvg, newStddev, newCount);

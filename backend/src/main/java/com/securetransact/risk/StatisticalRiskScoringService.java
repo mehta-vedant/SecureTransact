@@ -227,7 +227,7 @@ public class StatisticalRiskScoringService {
         return 0;
     }
 
-    private RiskLevel determineRiskLevel(int score) {
+    public static RiskLevel determineRiskLevel(int score) {
         if (score >= 76) return RiskLevel.CRITICAL;
         if (score >= 51) return RiskLevel.HIGH;
         if (score >= 21) return RiskLevel.MEDIUM;

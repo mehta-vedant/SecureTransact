@@ -30,6 +30,10 @@ User submits transaction
 │  │ Velocity Anomaly   │  │     Transactions/hour, rapid-transfer patterns
 │  ├────────────────────┤  │
 │  │ Temporal Anomaly   │  │     Odd-hours detection (1-5 AM)
+│  ├────────────────────┤  │
+│  │ ML Assistant       │  │     Optional IsolationForest sidecar (/score):
+│  │ (opt-in, soft)     │  │     folds a 0-100 anomaly score into the total,
+│  │                    │  │     graceful 500ms-timeout fallback when down
 │  └────────────────────┘  │
 │                          │     Score 0-100 → risk level (LOW/MEDIUM/HIGH/CRITICAL)
 └────────┬─────────────────┘
@@ -58,7 +62,7 @@ User submits transaction
          ▼
 ┌──────────────────────────┐
 │  PostgreSQL + Flyway     │  ── ACID-compliant persistence
-│                          │     Versioned migrations (V1, V2, V3)
+│                          │     Versioned migrations (V1 - V5)
 └──────────────────────────┘
 ```
 
@@ -130,18 +134,18 @@ public Transaction createTransaction(...) { ... }
 
 Audited events include: account creation, status changes, transaction lifecycle, fraud reviews, login/logout. Each event records: who, what, when, resource type/id, IP address, and arbitrary JSON details.
 
-## Python ML Service (standalone)
+## Python ML Service (risk-sensing sidecar)
 
-A self-contained Flask + scikit-learn service for *experimental* anomaly detection, kept isolated from the live transaction path:
+A Flask + scikit-learn anomaly detector that folds an independent signal into the risk engine. **Opt-in and soft:** when the sidecar is up, its 0-100 anomaly score is blended into the statistical total (`ML_ANOMALY_FLAGGED` +20, `ML_ANOMALY_BLOCK_INDICATED` +35); when it's down/disabled, transactions score statistically only. Controlled via `APP_ML_ENABLED`, `APP_ML_BASE_URL`, `APP_ML_TIMEOUT_MS`.
 
 | Component | Description |
 |-----------|--------------|
 | **IsolationForest** | Trained on synthetic transaction data (11-dim feature vector) |
-| **Feature extraction** | Mirrors the Java features (amount, hour, velocity, z-score...) |
+| **Feature extraction** | Amount, hour/day, z-score, account age, 1h/24h counts, 7d avg, unique recipients, cross-border, new payee |
 | **REST API** | `POST /score` → `{ riskScore: 0-100, decision, modelVersion }` |
-| **Serving** | Flask on :5001, Docker-ready (auto-trains model on build) |
+| **Serving** | Flask on :5001, model trained via `python -m securetransact_ml.train_model` (run at least once) |
 
-**Integration status:** the Java engine (`StatisticalRiskScoringService`) is fully self-contained and is the *single* source of scoring truth in the request path. `ml-service` is a research/tooling sidecar for experimenting with the same concepts; if you want to use its output as a second signal, hook it in at `RiskEngineService` (front-door of the risk pipeline).
+**Integration:** `RiskEngineService` collects features, calls `/score` with a 500ms timeout, blends the result, and persists `ml_probability` + the blended `model_version` on every `RiskEvaluation`. Any failure degrades silently to statistical-only — the ML service is never a single point of failure.
 
 ## Tech Stack
 
@@ -198,6 +202,10 @@ PATCH  /api/v1/admin/risk-cases/{id}/decision   Make BLOCK/APPROVE decision
 
 GET    /api/v1/admin/fraud-rules         List all fraud rule configs
 PUT    /api/v1/admin/fraud-rules/{id}    Update rule config (weight/threshold/enabled)
+
+GET    /api/v1/admin/blacklist           List blacklist entries (filter: type, active)
+POST   /api/v1/admin/blacklist           Add a blacklist entry (reactivates if inactive)
+DELETE /api/v1/admin/blacklist/{id}      Deactivate a blacklist entry (soft delete)
 ```
 
 ### ML Service (Python, port 5001)
@@ -311,7 +319,7 @@ mvn test
 Rules are stored in `fraud_rule_configs` and evaluated at runtime. Thresholds and weights can be tuned via API without redeployment — essential for adapting to new fraud patterns.
 
 **Java-first, single decision engine.**
-The Java `StatisticalRiskScoringService` is the only scoring path in production flow — no external runtime dependencies, fully testable. A standalone Python sidecar (`ml-service`) lets teams prototype model swaps without touching the transaction path.
+The Java `StatisticalRiskScoringService` is the authoritative scoring path — fully testable, zero external runtime dependencies. The Python ML sidecar (`ml-service`) is an *optional soft signal*: wired into `RiskEngineService` with a 500ms timeout and silent degradation, so model experiments can be swapped without risking the transaction path.
 
 **Behavioral profiling via streaming statistics.**
 Instead of storing every transaction, `BehavioralProfileService` maintains a rolling mean and standard deviation using an online (Welford-style) update, asynchronously after each transaction. This gives z-score anomaly detection with O(1) memory per user.

@@ -1,0 +1,1 @@
+ALTER TABLE transactions ADD COLUMN is_cross_border boolean NOT NULL DEFAULT false;

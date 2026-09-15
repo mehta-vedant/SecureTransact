@@ -29,4 +29,6 @@ public class TransactionRequest {
 
     @Size(max = 64, message = "Idempotency key must be at most 64 characters")
     private String idempotencyKey;
+
+    private Boolean crossBorder;
 }

@@ -23,6 +23,7 @@ public class TransactionResponse {
     private String fromAccountNumber;
     private String toAccountNumber;
     private String idempotencyKey;
+    private boolean crossBorder;
     private LocalDateTime createdAt;
 
     public static TransactionResponse from(Transaction txn) {
@@ -34,6 +35,7 @@ public class TransactionResponse {
         response.setRiskScore(txn.getRiskScore());
         response.setDescription(txn.getDescription());
         response.setIdempotencyKey(txn.getIdempotencyKey());
+        response.setCrossBorder(txn.isCrossBorder());
         response.setCreatedAt(txn.getCreatedAt());
 
         if (txn.getFromAccount() != null) {
