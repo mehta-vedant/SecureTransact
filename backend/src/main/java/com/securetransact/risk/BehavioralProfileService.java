@@ -40,6 +40,8 @@ public class BehavioralProfileService {
                         .stddevTransactionAmount(BigDecimal.ZERO)
                         .transactionsLast24h(0)
                         .transactionsLastHour(0)
+                        .typicalStartHour(new BigDecimal("8"))
+                        .typicalEndHour(new BigDecimal("22"))
                         .build());
 
         int n = profile.getTotalTransactionCount();
@@ -62,7 +64,15 @@ public class BehavioralProfileService {
 
         int hour = LocalDateTime.now().getHour();
         BigDecimal currentTypicalStart = profile.getTypicalStartHour();
+        if (currentTypicalStart == null) {
+            currentTypicalStart = new BigDecimal("8");
+            profile.setTypicalStartHour(currentTypicalStart);
+        }
         BigDecimal currentTypicalEnd = profile.getTypicalEndHour();
+        if (currentTypicalEnd == null) {
+            currentTypicalEnd = new BigDecimal("22");
+            profile.setTypicalEndHour(currentTypicalEnd);
+        }
         BigDecimal weightedHour = BigDecimal.valueOf(hour);
         BigDecimal newStart = currentTypicalStart.multiply(new BigDecimal("0.9"))
                 .add(weightedHour.multiply(new BigDecimal("0.1"))).setScale(0, RoundingMode.HALF_UP);

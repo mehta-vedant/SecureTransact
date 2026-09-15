@@ -19,4 +19,15 @@ public class RiskDecisionEngine {
         }
         return RiskDecision.ALLOW;
     }
+
+    public static RiskDecision fromScore(int totalScore) {
+        RiskLevel level = StatisticalRiskScoringService.determineRiskLevel(totalScore);
+        if (level == RiskLevel.CRITICAL || totalScore >= BLOCK_THRESHOLD) {
+            return RiskDecision.BLOCK;
+        }
+        if (level == RiskLevel.HIGH || level == RiskLevel.MEDIUM || totalScore >= HOLD_THRESHOLD) {
+            return RiskDecision.HOLD_FOR_REVIEW;
+        }
+        return RiskDecision.ALLOW;
+    }
 }

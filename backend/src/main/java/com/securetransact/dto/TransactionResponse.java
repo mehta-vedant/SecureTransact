@@ -3,6 +3,8 @@ package com.securetransact.dto;
 import com.securetransact.model.Transaction;
 import com.securetransact.model.TransactionStatus;
 import com.securetransact.model.TransactionType;
+import com.securetransact.risk.RiskDecisionEngine;
+import com.securetransact.risk.StatisticalRiskScoringService;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -33,6 +35,10 @@ public class TransactionResponse {
         response.setAmount(txn.getAmount());
         response.setStatus(txn.getStatus());
         response.setRiskScore(txn.getRiskScore());
+        if (txn.getRiskScore() != null) {
+            response.setRiskLevel(StatisticalRiskScoringService.determineRiskLevel(txn.getRiskScore()).name());
+            response.setRiskDecision(RiskDecisionEngine.fromScore(txn.getRiskScore()).name());
+        }
         response.setDescription(txn.getDescription());
         response.setIdempotencyKey(txn.getIdempotencyKey());
         response.setCrossBorder(txn.isCrossBorder());
