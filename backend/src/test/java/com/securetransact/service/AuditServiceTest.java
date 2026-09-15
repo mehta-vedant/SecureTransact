@@ -1,10 +1,15 @@
 package com.securetransact.service;
 
+import com.securetransact.dto.AuditEventResponse;
+import com.securetransact.dto.PaginatedResponse;
 import com.securetransact.model.AuditAction;
 import com.securetransact.model.AuditEvent;
+import com.securetransact.model.Role;
+import com.securetransact.model.User;
 import com.securetransact.repository.AuditEventRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +32,16 @@ class AuditServiceTest {
     @InjectMocks
     private AuditService auditService;
 
+    private User buildAdminUser() {
+        return User.builder()
+                .id(10L)
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin@test.com")
+                .role(Role.ADMIN)
+                .build();
+    }
+
     @Test
     void shouldRecordAuditEvent() {
         when(auditEventRepository.save(any(AuditEvent.class))).thenAnswer(inv -> {
@@ -35,71 +50,70 @@ class AuditServiceTest {
             return ev;
         });
 
-        AuditEvent saved = auditService.recordEvent(
-                "admin@test.com",
-                AuditAction.TRANSACTION_FLAGGED,
-                "Transaction flagged for review",
-                "TRANSACTION",
-                100L,
-                "{\"score\":72}"
-        );
+        User admin = buildAdminUser();
+        auditService.recordEvent(AuditAction.TRANSACTION_REJECTED, "TRANSACTION", 100L,
+                "{\"score\":72}", admin, "127.0.0.1", "curl/8.0");
 
-        assertNotNull(saved);
-        assertEquals("admin@test.com", saved.getPerformedBy());
-        assertEquals(AuditAction.TRANSACTION_FLAGGED, saved.getAction());
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventRepository).save(captor.capture());
+        AuditEvent saved = captor.getValue();
+        assertEquals(admin, saved.getActor());
+        assertEquals(AuditAction.TRANSACTION_REJECTED, saved.getAction());
         assertEquals("TRANSACTION", saved.getResourceType());
         assertEquals(100L, saved.getResourceId());
-        verify(auditEventRepository).save(any(AuditEvent.class));
+        assertEquals("127.0.0.1", saved.getIpAddress());
+        assertEquals("curl/8.0", saved.getUserAgent());
     }
 
     @Test
     void shouldRecordEventWithoutResource() {
         when(auditEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuditEvent saved = auditService.recordEvent(
-                "system",
-                AuditAction.USER_LOGIN,
-                "Login successful",
-                null,
-                null,
-                null
-        );
+        auditService.recordEvent(AuditAction.USER_LOGIN, null, null, "Login successful", null, null, null);
 
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventRepository).save(captor.capture());
+        AuditEvent saved = captor.getValue();
         assertNull(saved.getResourceType());
         assertNull(saved.getResourceId());
+        assertEquals(AuditAction.USER_LOGIN, saved.getAction());
     }
 
     @Test
     void shouldQueryAuditEvents() {
         Page<AuditEvent> mockPage = new PageImpl<>(
-                List.of(AuditEvent.builder().id(1L).action(AuditAction.USER_LOGIN).build()),
+                List.of(AuditEvent.builder().id(1L).action(AuditAction.USER_LOGIN)
+                        .resourceType("SYSTEM").build()),
                 PageRequest.of(0, 10),
                 1
         );
-        when(auditEventRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(mockPage);
+        when(auditEventRepository.findAll(any(Pageable.class))).thenReturn(mockPage);
 
-        Page<AuditEvent> result = auditService.getEvents(PageRequest.of(0, 10));
+        PaginatedResponse<AuditEventResponse> result = auditService.getAuditEvents(0, 10);
 
         assertEquals(1, result.getContent().size());
         assertEquals(AuditAction.USER_LOGIN, result.getContent().get(0).getAction());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(0, result.getPage());
     }
 
     @Test
     void shouldQueryEventsByAction() {
         Page<AuditEvent> mockPage = new PageImpl<>(
                 List.of(
-                        AuditEvent.builder().id(1L).action(AuditAction.TRANSACTION_FLAGGED).build(),
-                        AuditEvent.builder().id(2L).action(AuditAction.TRANSACTION_FLAGGED).build()
+                        AuditEvent.builder().id(1L).action(AuditAction.TRANSACTION_REJECTED).resourceType("TRANSACTION").build(),
+                        AuditEvent.builder().id(2L).action(AuditAction.TRANSACTION_REJECTED).resourceType("TRANSACTION").build()
                 ),
                 PageRequest.of(0, 10),
                 2
         );
-        when(auditEventRepository.findByActionOrderByCreatedAtDesc(eq(AuditAction.TRANSACTION_FLAGGED), any(Pageable.class)))
+        when(auditEventRepository.findByAction(eq(AuditAction.TRANSACTION_REJECTED), any(Pageable.class)))
                 .thenReturn(mockPage);
 
-        Page<AuditEvent> result = auditService.getEventsByAction(AuditAction.TRANSACTION_FLAGGED, PageRequest.of(0, 10));
+        PaginatedResponse<AuditEventResponse> result = auditService.getAuditEventsByAction(AuditAction.TRANSACTION_REJECTED, 0, 10);
 
         assertEquals(2, result.getContent().size());
+        assertEquals(AuditAction.TRANSACTION_REJECTED, result.getContent().get(0).getAction());
     }
 
     @Test
@@ -109,10 +123,10 @@ class AuditServiceTest {
                 PageRequest.of(0, 10),
                 1
         );
-        when(auditEventRepository.findByResourceTypeAndResourceIdOrderByCreatedAtDesc(
+        when(auditEventRepository.findByResourceTypeAndResourceId(
                 eq("TRANSACTION"), eq(100L), any(Pageable.class))).thenReturn(mockPage);
 
-        Page<AuditEvent> result = auditService.getEventsByResource("TRANSACTION", 100L, PageRequest.of(0, 10));
+        PaginatedResponse<AuditEventResponse> result = auditService.getAuditEventsForResource("TRANSACTION", 100L, 0, 10);
 
         assertEquals(1, result.getContent().size());
         assertEquals(100L, result.getContent().get(0).getResourceId());

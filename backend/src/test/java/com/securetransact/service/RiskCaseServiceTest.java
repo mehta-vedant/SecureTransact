@@ -1,7 +1,12 @@
 package com.securetransact.service;
 
+import com.securetransact.dto.RiskCaseDecisionRequest;
+import com.securetransact.dto.RiskCaseResponse;
+import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.*;
-import com.securetransact.repository.*;
+import com.securetransact.repository.RiskCaseRepository;
+import com.securetransact.repository.TransactionRepository;
+import com.securetransact.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,91 +25,139 @@ import static org.mockito.Mockito.*;
 class RiskCaseServiceTest {
 
     @Mock private RiskCaseRepository riskCaseRepository;
-    @Mock private AuditService auditService;
+    @Mock private TransactionRepository transactionRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private TransactionProcessor processor;
 
     @InjectMocks
     private RiskCaseService riskCaseService;
 
+    private User admin;
+    private Transaction transaction;
     private RiskCase sampleCase;
 
     @BeforeEach
     void setUp() {
+        admin = User.builder()
+                .id(7L)
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin@test.com")
+                .role(Role.ADMIN)
+                .build();
+        transaction = Transaction.builder()
+                .id(100L)
+                .type(TransactionType.TRANSFER)
+                .amount(new BigDecimal("1500.00"))
+                .status(TransactionStatus.HELD_FOR_REVIEW)
+                .build();
         sampleCase = RiskCase.builder()
                 .id(1L)
-                .transactionId(100L)
-                .fraudScore(72)
+                .transaction(transaction)
                 .status(CaseStatus.OPEN)
-                .createdAt(LocalDateTime.now())
                 .build();
     }
 
     @Test
     void shouldCreateRiskCase() {
+        RiskEvaluation evaluation = RiskEvaluation.builder()
+                .id(50L)
+                .transaction(transaction)
+                .totalScore(72)
+                .riskLevel(RiskLevel.HIGH)
+                .decision(RiskDecision.HOLD_FOR_REVIEW)
+                .modelVersion("statistical-risk-v1")
+                .build();
+
         when(riskCaseRepository.save(any(RiskCase.class))).thenAnswer(inv -> {
             RiskCase rc = inv.getArgument(0);
             rc.setId(2L);
             return rc;
         });
 
-        RiskCase created = riskCaseService.createCase(100L, 72, "LARGE_AMOUNT,HIGH_VELOCITY");
+        RiskCase created = riskCaseService.createRiskCase(transaction, evaluation);
 
         assertNotNull(created);
+        assertEquals(2L, created.getId());
         assertEquals(CaseStatus.OPEN, created.getStatus());
-        assertEquals(72, created.getFraudScore());
-        assertEquals(100L, created.getTransactionId());
-        verify(auditService).recordEvent(eq("SYSTEM"), eq(AuditAction.TRANSACTION_FLAGGED), anyString(), anyString(), any(), any());
+        assertEquals(transaction, created.getTransaction());
+        assertEquals(evaluation, created.getRiskEvaluation());
+        verify(riskCaseRepository).save(any(RiskCase.class));
     }
 
     @Test
     void shouldAssignCase() {
         when(riskCaseRepository.findById(1L)).thenReturn(Optional.of(sampleCase));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
         when(riskCaseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        RiskCase assigned = riskCaseService.assignCase(1L, "admin@test.com");
+        RiskCaseResponse assigned = riskCaseService.assignCase(1L, 7L);
 
         assertEquals(CaseStatus.IN_REVIEW, assigned.getStatus());
-        assertEquals("admin@test.com", assigned.getAssignedTo());
-        assertNotNull(assigned.getAssignedAt());
-        verify(auditService).recordEvent(eq("admin@test.com"), eq(AuditAction.FRAUD_REVIEWED), anyString(), anyString(), any(), any());
+        assertEquals(7L, assigned.getAssignedToId());
+        assertEquals("Admin User", assigned.getAssignedToName());
     }
 
     @Test
     void shouldApproveCase() {
         when(riskCaseRepository.findById(1L)).thenReturn(Optional.of(sampleCase));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
         when(riskCaseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(processor.processMoneyMovement(transaction)).thenReturn(TransactionStatus.SETTLED);
 
-        RiskCase resolved = riskCaseService.decideCase(1L, "APPROVE", "Legitimate large transfer", "admin@test.com");
+        RiskCaseDecisionRequest request = new RiskCaseDecisionRequest();
+        request.setDecision(RiskDecision.ALLOW);
+        request.setReviewNotes("Legitimate large transfer");
 
-        assertEquals(CaseStatus.RESOLVED_LEGITIMATE, resolved.getStatus());
+        RiskCaseResponse resolved = riskCaseService.decideCase(1L, request, 7L);
+
+        assertEquals(CaseStatus.APPROVED, resolved.getStatus());
         assertEquals("Legitimate large transfer", resolved.getReviewNotes());
-        assertNotNull(resolved.getResolvedAt());
+        assertEquals(RiskDecision.ALLOW, resolved.getAdminDecision());
+        assertEquals(TransactionStatus.SETTLED, transaction.getStatus());
+        verify(processor).processMoneyMovement(transaction);
+        verify(transactionRepository).save(sampleCase.getTransaction());
     }
 
     @Test
     void shouldBlockCase() {
         when(riskCaseRepository.findById(1L)).thenReturn(Optional.of(sampleCase));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
         when(riskCaseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        RiskCase resolved = riskCaseService.decideCase(1L, "BLOCK", "Confirmed fraud", "admin@test.com");
+        RiskCaseDecisionRequest request = new RiskCaseDecisionRequest();
+        request.setDecision(RiskDecision.BLOCK);
+        request.setReviewNotes("Confirmed fraud");
 
-        assertEquals(CaseStatus.RESOLVED_FRAUD, resolved.getStatus());
+        RiskCaseResponse resolved = riskCaseService.decideCase(1L, request, 7L);
+
+        assertEquals(CaseStatus.REJECTED, resolved.getStatus());
         assertEquals("Confirmed fraud", resolved.getReviewNotes());
+        assertEquals(RiskDecision.BLOCK, resolved.getAdminDecision());
+        assertEquals(TransactionStatus.REJECTED, transaction.getStatus());
+    }
+
+    @Test
+    void shouldEscalateCase() {
+        when(riskCaseRepository.findById(1L)).thenReturn(Optional.of(sampleCase));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(admin));
+        when(riskCaseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        RiskCaseDecisionRequest request = new RiskCaseDecisionRequest();
+        request.setDecision(RiskDecision.HOLD_FOR_REVIEW);
+        request.setReviewNotes("Escalate to senior review");
+
+        RiskCaseResponse resolved = riskCaseService.decideCase(1L, request, 7L);
+
+        assertEquals(CaseStatus.ESCALATED, resolved.getStatus());
+        assertEquals(TransactionStatus.HELD_FOR_REVIEW, transaction.getStatus());
     }
 
     @Test
     void shouldThrowWhenCaseNotFound() {
         when(riskCaseRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () ->
-                riskCaseService.assignCase(999L, "admin@test.com"));
-    }
-
-    @Test
-    void shouldThrowWhenDecidingNonReviewableStatus() {
-        sampleCase.setStatus(CaseStatus.RESOLVED_FRAUD);
-        when(riskCaseRepository.findById(1L)).thenReturn(Optional.of(sampleCase));
-
-        assertThrows(IllegalStateException.class, () ->
-                riskCaseService.decideCase(1L, "APPROVE", "Too late", "admin@test.com"));
+        assertThrows(ResourceNotFoundException.class, () ->
+                riskCaseService.assignCase(999L, 7L));
     }
 }

@@ -6,7 +6,6 @@ import com.securetransact.dto.RiskCaseResponse;
 import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.*;
 import com.securetransact.repository.RiskCaseRepository;
-import com.securetransact.repository.RiskEvaluationRepository;
 import com.securetransact.repository.TransactionRepository;
 import com.securetransact.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +25,9 @@ import java.util.List;
 public class RiskCaseService {
 
     private final RiskCaseRepository riskCaseRepository;
-    private final RiskEvaluationRepository riskEvaluationRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final TransactionProcessor processor;
 
     @Transactional
     public RiskCase createRiskCase(Transaction transaction, RiskEvaluation evaluation) {
@@ -99,7 +98,8 @@ public class RiskCaseService {
         switch (request.getDecision()) {
             case ALLOW -> {
                 riskCase.setStatus(CaseStatus.APPROVED);
-                transaction.setStatus(TransactionStatus.APPROVED);
+                TransactionStatus settlementStatus = processor.processMoneyMovement(transaction);
+                transaction.setStatus(settlementStatus);
             }
             case BLOCK -> {
                 riskCase.setStatus(CaseStatus.REJECTED);
