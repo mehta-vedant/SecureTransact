@@ -1,0 +1,75 @@
+{
+  "dataset": "UCI Credit Card Fraud",
+  "source": "kaggle.com/datasets/mlg-ulb/creditcardfraud (HuggingFace mirror)",
+  "rows": 284807,
+  "fraud_rate_pct": 0.00173,
+  "archived_locally": "data/creditcard.csv",
+  "best_model": "E2 XGB(full)",
+  "best_pr_auc": 0.8871,
+  "isolation_forest_pr_auc_11": 0.0026,
+  "models": {
+    "A0 Dummy(majority)": {
+      "pr_auc": 0.0017,
+      "roc_auc": 0.5,
+      "prec@0.5": 0.0,
+      "rec@0.5": 0.0,
+      "train_time_s": 0.0013
+    },
+    "B1 LogReg(11)": {
+      "pr_auc": 0.0031,
+      "roc_auc": 0.6055,
+      "prec@0.5": 0.0024,
+      "rec@0.5": 0.5408,
+      "train_time_s": 0.0262
+    },
+    "B2 LogReg(full)": {
+      "pr_auc": 0.7222,
+      "roc_auc": 0.9738,
+      "prec@0.5": 0.056,
+      "rec@0.5": 0.9082,
+      "train_time_s": 0.0256
+    },
+    "C1 RF(11)": {
+      "pr_auc": 0.0737,
+      "roc_auc": 0.7892,
+      "prec@0.5": 0.0126,
+      "rec@0.5": 0.4694,
+      "train_time_s": 0.2341
+    },
+    "C2 RF(full)": {
+      "pr_auc": 0.8044,
+      "roc_auc": 0.9849,
+      "prec@0.5": 0.802,
+      "rec@0.5": 0.8265,
+      "train_time_s": 0.1937
+    },
+    "D1 IsoForest(11)": {
+      "pr_auc": 0.0026,
+      "roc_auc": 0.5786,
+      "prec@0.5": 0.0037,
+      "rec@0.5": 0.0918,
+      "train_time_s": 6.5954
+    },
+    "D2 IsoForest(full)": {
+      "pr_auc": 0.1246,
+      "roc_auc": 0.9531,
+      "prec@0.5": 0.0817,
+      "rec@0.5": 0.6633,
+      "train_time_s": 6.4969
+    },
+    "E1 XGB(11)": {
+      "pr_auc": 0.0625,
+      "roc_auc": 0.785,
+      "prec@0.5": 0.0077,
+      "rec@0.5": 0.4898,
+      "train_time_s": 0.0746
+    },
+    "E2 XGB(full)": {
+      "pr_auc": 0.8871,
+      "roc_auc": 0.9704,
+      "prec@0.5": 0.8913,
+      "rec@0.5": 0.8367,
+      "train_time_s": 0.0864
+    }
+  }
+}

@@ -27,5 +27,7 @@ frontend/.env
 
 # Python (ml-service)
 ml-service/models/*.pkl
+ml-service/analysis/data/
+ml-service/analysis/*.pkl
 __pycache__/
 *.pyc

@@ -3,7 +3,7 @@
 Exposes POST /score that accepts a transaction feature vector and
 returns a risk score (0-100) with a decision (ALLOW / HOLD_FOR_REVIEW / BLOCK).
 
-Standalone endpoint — not currently called by the Java backend.
+Called by the Java backend via MlClientConfig bean (RestClient) with a 500ms timeout.
 """
 from __future__ import annotations
 

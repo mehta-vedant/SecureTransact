@@ -1,5 +1,5 @@
 """SecureTransact ML Risk Scoring Service.
 
 Statistical anomaly detection + behavioral profiling.
-This module exposes a standalone Flask API (POST /score). It is not currently
-wired into the Java backend's live decision path (see ml-service/README)."""
+This module exposes a Flask API (POST /score) called by the Java backend
+via MlClientConfig (RestClient) with a 500ms timeout."""
