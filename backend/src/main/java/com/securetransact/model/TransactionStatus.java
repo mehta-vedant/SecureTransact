@@ -7,6 +7,5 @@ public enum TransactionStatus {
     HELD_FOR_REVIEW,
     SETTLED,
     REJECTED,
-    FAILED,
-    REVERSED
+    FAILED
 }

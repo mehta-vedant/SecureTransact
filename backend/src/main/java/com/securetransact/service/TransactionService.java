@@ -5,7 +5,6 @@ import com.securetransact.dto.TransactionRequest;
 import com.securetransact.dto.TransactionResponse;
 import com.securetransact.exception.ConflictException;
 import com.securetransact.model.*;
-import com.securetransact.repository.FraudLogRepository;
 import com.securetransact.repository.RiskEvaluationRepository;
 import com.securetransact.repository.TransactionRepository;
 import com.securetransact.risk.RiskDecisionEngine;
@@ -35,7 +34,6 @@ public class TransactionService {
     private final RiskCaseService riskCaseService;
     private final AuditService auditService;
     private final RiskEvaluationRepository riskEvaluationRepository;
-    private final FraudLogRepository fraudLogRepository;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Auditable(action = AuditAction.TRANSACTION_CREATED, resourceType = "TRANSACTION",

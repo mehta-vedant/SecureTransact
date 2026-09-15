@@ -17,12 +17,9 @@ public class RiskEngineService {
     private final StatisticalRiskScoringService statisticalScoringService;
     private final RiskDecisionEngine decisionEngine;
     private final BehavioralProfileService behavioralProfileService;
-    private final RiskFeatureExtractor featureExtractor;
 
     public RiskEngineResult evaluateTransaction(Transaction transaction, Account sourceAccount) {
         RiskScoringResult scoringResult = statisticalScoringService.scoreTransaction(transaction, sourceAccount);
-
-        var features = featureExtractor.extractFeatures(transaction, sourceAccount);
 
         var decision = decisionEngine.decide(scoringResult.getRiskLevel(), scoringResult.getTotalScore());
         scoringResult.setDecision(decision);
@@ -35,7 +32,6 @@ public class RiskEngineService {
 
         return RiskEngineResult.builder()
                 .scoringResult(scoringResult)
-                .features(features)
                 .build();
     }
 }
