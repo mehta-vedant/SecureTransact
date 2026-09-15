@@ -85,14 +85,20 @@ Frontend: `VITE_API_URL` (optional in dev; proxied).
 
 ## Testing
 
-31 tests / 6 suites, `mvn test` against H2 (`ddl-auto: create-drop`, Flyway disabled):
+35 tests / 7 suites — `mvn verify`.
 
+**Unit (`mvn test`, H2, `ddl-auto: create-drop`, Flyway disabled):**
 - `AuthControllerTest` (5)
 - `StatisticalRiskScoringServiceTest` (7)
 - `AuditServiceTest` (5)
 - `RiskCaseServiceTest` (6)
 - `RiskEngineServiceTest` (5)
 - `RiskScoringClientTest` (3)
+
+**Integration (failsafe phase, Testcontainers `postgres:16-alpine`, Flyway V1–V5, `ddl-auto: validate`):**
+- `SecureTransactIntegrationIT` (4) — migrations, auto-settle, double-blacklist BLOCK, HOLD→approve→SETTLED,
+  idempotent dedupe; skips when Docker is unavailable. Requires `docker-java.properties`
+  (`api.version=1.44`) for Docker Engine v29 connectivity.
 
 ## Known Issues / Refactor Candidates
 
@@ -104,6 +110,10 @@ Frontend: `VITE_API_URL` (optional in dev; proxied).
 - **ML is disabled in tests** (`application-test.yml` sets `app.ml.enabled=false`). An integration
   test could containerize `ml-service`, but the Java-side contract is already covered by
   `RiskScoringClientTest` via `MockRestServiceServer`.
+- **Real-data ML benchmark**: `ml-service/analysis/fraud_real_data_analysis.ipynb` (executed,
+  run against UCI Credit Card Fraud, 284,807 rows) benchmarks IsolationForest vs supervised
+  baselines incl. XGBoost and why it still justifies the label-free production model — see
+  `docs/ML_MODEL_JUSTIFICATION.md`. Dataset (`data/creditcard.csv`) and exported `.pkl` are git-ignored.
 - **`UserController` returns raw `Map`s** instead of typed DTOs (minor contract smell).
 - **Rate limiting is in-memory** — fine single-instance; distributed deployments need Redis/etc.
 - **v1 controllers lack integration tests** — only services are unit-tested.

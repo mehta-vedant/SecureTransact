@@ -273,13 +273,23 @@ point elsewhere via `APP_ML_ENABLED` / `APP_ML_BASE_URL` / `APP_ML_TIMEOUT_MS`).
 
 ## 11. Testing
 
-31 tests / 6 suites — `mvn test` (H2, Flyway disabled):
+35 tests / 7 suites — `mvn verify` (31 unit on H2 + 4 integration on Testcontainers Postgres 16):
+
+**Unit (`mvn test`, H2, Flyway disabled):**
 - `AuthControllerTest` (5) — register duplicate/login/invalid flows
 - `StatisticalRiskScoringServiceTest` (7) — policy rules, blacklist, velocity, temporal
 - `AuditServiceTest` (5) — audit recording + filtering
 - `RiskCaseServiceTest` (6) — create/assign/approve(sets transaction to SETTLED)/block/escalate/not-found
 - `RiskEngineServiceTest` (5) — ML boost blend, cap, fallback, and no-double-count (ML disabled)
 - `RiskScoringClientTest` (3) — HTTP contract via `MockRestServiceServer` (200 / 5xx / disabled)
+
+**Integration (`mvn verify` failsafe phase, Testcontainers `postgres:16-alpine`, Flyway V1–V5, `ddl-auto: validate`):**
+- `SecureTransactIntegrationIT` (4) — full pipeline against real Postgres: V1–V5 migrations apply,
+  auto-settle low risk, double-blacklist → BLOCK/REJECTED, HOLD → assign → approve → SETTLED,
+  idempotent dedupe. Container is skipped gracefully when Docker is unavailable
+  (`@Testcontainers(disabledWithoutDocker = true)`).
+- Docker Engine v29 requires `docker-java.properties` (`api.version=1.44`) so Testcontainers can
+  negotiate the engine API.
 
 ## 12. Key Design Decisions
 
