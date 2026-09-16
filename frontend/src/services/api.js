@@ -4,18 +4,32 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 let _onUnauthorized = null;
 export const setUnauthorizedHandler = (fn) => { _onUnauthorized = fn; };
 
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[2]) : null;
+let _csrfToken = null;
+let _csrfPromise = null;
+
+// Forces the CSRF token into the repository AND captures the token for JS use.
+// The backend is a different origin than this app (cross-site), so the XSRF-TOKEN
+// cookie is not visible to document.cookie here; the token must come from the
+// response body. Send it as the X-XSRF-TOKEN header on all mutations.
+export function fetchCsrfToken() {
+  if (!_csrfPromise) {
+    _csrfPromise = fetch(`${BASE_URL}/api/csrf`, { credentials: 'include' })
+      .then(async (res) => {
+        const body = await res.json();
+        _csrfToken = body?.token || null;
+      })
+      .catch(() => {
+        _csrfToken = null;
+      })
+      .finally(() => {
+        _csrfPromise = null;
+      });
+  }
+  return _csrfPromise;
 }
 
-// Forces the XSRF-TOKEN cookie to be issued (CSRF protection for cookie auth)
-export async function fetchCsrfToken() {
-  try {
-    await fetch(`${BASE_URL}/api/csrf`, { credentials: 'include' });
-  } catch {
-    // Best-effort; mutations will fail loudly if the cookie is missing
-  }
+async function ensureCsrfToken() {
+  if (!_csrfToken) await fetchCsrfToken();
 }
 
 async function apiCall(endpoint, options = {}) {
@@ -23,9 +37,10 @@ async function apiCall(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
 
   // CSRF token header on all state-changing requests
-  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
-    const csrfToken = getCookie('XSRF-TOKEN');
-    if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken;
+  const isMutating = !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method);
+  if (isMutating) {
+    await ensureCsrfToken();
+    if (_csrfToken) headers['X-XSRF-TOKEN'] = _csrfToken;
   }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {

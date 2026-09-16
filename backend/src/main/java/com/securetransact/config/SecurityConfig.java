@@ -42,6 +42,12 @@ public class SecurityConfig {
     @Value("${app.swagger-enabled:false}")
     private boolean swaggerEnabled;
 
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+
+    @Value("${app.cookie.same-site:lax}")
+    private String cookieSameSite;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -77,7 +83,14 @@ public class SecurityConfig {
 
     @Bean
     public CsrfTokenRepository csrfTokenRepository() {
-        return CookieCsrfTokenRepository.withHttpOnlyFalse();
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        // AUTH_TOKEN is already SameSite=None; Secure in the cross-site (Vercel -> Render)
+        // deployment. The CSRF cookie must match, otherwise browsers refuse to store it on
+        // cross-site requests and every state-changing call 403s. Keep both in lockstep.
+        repository.setCookieCustomizer(builder -> builder
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite));
+        return repository;
     }
 
     // Filters are added to the security chain above; keep Spring Boot from also
