@@ -23,7 +23,14 @@ public class CsrfController {
 
     @GetMapping
     public ResponseEntity<Map<String, String>> getCsrfToken(HttpServletRequest request, HttpServletResponse response) {
-        CsrfToken token = csrfTokenRepository.generateToken(request);
+        // Reuse an existing cookie token when present instead of minting a new one
+        // on every call. The frontend refreshes the token before each mutation, and
+        // a stable value keeps the header/cookie pair in lockstep across the
+        // cross-site (Vercel -> Render) deployment.
+        CsrfToken token = csrfTokenRepository.loadToken(request);
+        if (token == null) {
+            token = csrfTokenRepository.generateToken(request);
+        }
         csrfTokenRepository.saveToken(token, request, response);
         return ResponseEntity.ok(Map.of("token", token.getToken()));
     }

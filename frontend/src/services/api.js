@@ -29,7 +29,11 @@ export function fetchCsrfToken() {
 }
 
 async function ensureCsrfToken() {
-  if (!_csrfToken) await fetchCsrfToken();
+  // The backend issues a fresh token per /api/csrf call and clears the
+  // XSRF-TOKEN cookie after a mutation, so a cached header can drift out of
+  // sync with the cookie and every state-changing call 403s. Always fetch a
+  // fresh token so the header matches the cookie set by the same response.
+  await fetchCsrfToken();
 }
 
 async function apiCall(endpoint, options = {}) {
