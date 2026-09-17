@@ -26,6 +26,7 @@ class RiskEngineServiceTest {
     @Mock private StatisticalRiskScoringService statisticalScoringService;
     @Mock private RiskDecisionEngine decisionEngine;
     @Mock private BehavioralProfileService behavioralProfileService;
+    @Mock private InProcessAnomalyScorer inProcessAnomalyScorer;
     @Mock private RiskScoringClient riskScoringClient;
     @Mock private com.securetransact.ml.MlFeatureCollector featureCollector;
 
@@ -60,12 +61,18 @@ class RiskEngineServiceTest {
                 .build();
     }
 
+    private void stubAnomaly(int riskScore) {
+        when(inProcessAnomalyScorer.score(any()))
+                .thenReturn(new MlScore(riskScore, "ALLOW", InProcessAnomalyScorer.MODEL_VERSION));
+    }
+
     @Test
-    void shouldApplyBlockBoostForHighMlScore() {
+    void shouldApplyBlockBoostForHighAnomalyScore() {
         when(statisticalScoringService.scoreTransaction(any(), any()))
                 .thenReturn(statisticalResult(20, RiskLevel.LOW));
-        when(riskScoringClient.score(any())).thenReturn(Optional.of(new MlScore(85, "BLOCK", "isolation-forest-v1")));
+        when(riskScoringClient.score(any())).thenReturn(Optional.empty());
         when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(85);
 
         RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
 
@@ -73,29 +80,31 @@ class RiskEngineServiceTest {
         assertEquals(RiskLevel.HIGH, result.getScoringResult().getRiskLevel());
         assertNotNull(result.getScoringResult().getMlProbability());
         assertTrue(result.getScoringResult().getFactors().stream()
-                .anyMatch(f -> f.getCode().equals("ML_ANOMALY_BLOCK_INDICATED")));
+                .anyMatch(f -> f.getCode().equals("ANOMALY_BLOCK_INDICATED")));
     }
 
     @Test
-    void shouldApplyFlagBoostForMediumMlScore() {
+    void shouldApplyFlagBoostForMediumAnomalyScore() {
         when(statisticalScoringService.scoreTransaction(any(), any()))
                 .thenReturn(statisticalResult(10, RiskLevel.LOW));
-        when(riskScoringClient.score(any())).thenReturn(Optional.of(new MlScore(60, "HOLD_FOR_REVIEW", "isolation-forest-v1")));
+        when(riskScoringClient.score(any())).thenReturn(Optional.empty());
         when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(60);
 
         RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
 
         assertEquals(30, result.getScoringResult().getTotalScore());
         assertTrue(result.getScoringResult().getFactors().stream()
-                .anyMatch(f -> f.getCode().equals("ML_ANOMALY_FLAGGED")));
+                .anyMatch(f -> f.getCode().equals("ANOMALY_FLAGGED")));
     }
 
     @Test
     void shouldCapsCoreAt100AndUpgradeLevel() {
         when(statisticalScoringService.scoreTransaction(any(), any()))
                 .thenReturn(statisticalResult(90, RiskLevel.CRITICAL));
-        when(riskScoringClient.score(any())).thenReturn(Optional.of(new MlScore(95, "BLOCK", "isolation-forest-v1")));
+        when(riskScoringClient.score(any())).thenReturn(Optional.empty());
         when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(95);
 
         RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
 
@@ -104,28 +113,53 @@ class RiskEngineServiceTest {
     }
 
     @Test
-    void shouldIgnoreLowMlScore() {
+    void shouldIgnoreLowAnomalyScore() {
         when(statisticalScoringService.scoreTransaction(any(), any()))
                 .thenReturn(statisticalResult(10, RiskLevel.LOW));
-        when(riskScoringClient.score(any())).thenReturn(Optional.of(new MlScore(20, "ALLOW", "isolation-forest-v1")));
+        when(riskScoringClient.score(any())).thenReturn(Optional.empty());
         when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(20);
 
         RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
 
         assertEquals(10, result.getScoringResult().getTotalScore());
         assertTrue(result.getScoringResult().getFactors().isEmpty());
+        assertNull(result.getScoringResult().getMlProbability());
     }
 
     @Test
-    void shouldFallBackSilentlyWhenMlUnavailable() {
+    void shouldAddRemoteMlBoostOnTopOfAnomalyBoost() {
+        when(statisticalScoringService.scoreTransaction(any(), any()))
+                .thenReturn(statisticalResult(20, RiskLevel.LOW));
+        when(riskScoringClient.score(any()))
+                .thenReturn(Optional.of(new MlScore(85, "BLOCK", "isolation-forest-v1")));
+        when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(85);
+
+        RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
+
+        assertEquals(70, result.getScoringResult().getTotalScore());
+        assertTrue(result.getScoringResult().getFactors().stream()
+                .anyMatch(f -> f.getCode().equals("ANOMALY_BLOCK_INDICATED")));
+        assertTrue(result.getScoringResult().getFactors().stream()
+                .anyMatch(f -> f.getCode().equals("ML_ANOMALY_BLOCK_INDICATED")));
+        assertTrue(result.getScoringResult().getModelVersion()
+                .contains("in-process-anomaly-v1+isolation-forest-v1"));
+    }
+
+    @Test
+    void shouldRunAnomalyBoostEvenWhenMlUnavailable() {
         when(statisticalScoringService.scoreTransaction(any(), any()))
                 .thenReturn(statisticalResult(10, RiskLevel.LOW));
         when(riskScoringClient.score(any())).thenReturn(Optional.empty());
         when(decisionEngine.decide(any(), anyInt())).thenReturn(RiskDecision.ALLOW);
+        stubAnomaly(60);
 
         RiskEngineResult result = riskEngineService.evaluateTransaction(transaction, account);
 
-        assertEquals(10, result.getScoringResult().getTotalScore());
-        assertNull(result.getScoringResult().getMlProbability());
+        assertEquals(30, result.getScoringResult().getTotalScore());
+        assertNotNull(result.getScoringResult().getMlProbability());
+        assertTrue(result.getScoringResult().getModelVersion()
+                .contains(InProcessAnomalyScorer.MODEL_VERSION));
     }
 }

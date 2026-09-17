@@ -39,7 +39,7 @@ public class RiskScoringClient {
             }
             return Optional.of(new MlScore(response.riskScore(), response.decision(), response.modelVersion()));
         } catch (RestClientResponseException | ResourceAccessException e) {
-            log.warn("ML service unavailable ({}); using statistical scoring only", e.getMessage());
+            log.info("Optional remote ML scorer unavailable ({}); relying on in-process anomaly scorer", e.getMessage());
             return Optional.empty();
         }
     }
