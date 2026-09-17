@@ -35,6 +35,13 @@ app:
     enabled: ${APP_ML_ENABLED:true}
     base-url: ${APP_ML_BASE_URL:http://localhost:5001}
     timeout-ms: ${APP_ML_TIMEOUT_MS:500}
+  demo:
+    enabled: ${APP_DEMO_ENABLED:false}
+    source-email: ${APP_DEMO_SOURCE_EMAIL:alice@demo.securetransact.app}
+    source-password: ${APP_DEMO_SOURCE_PASSWORD:demo-alice-1234}
+    merchant-email: ${APP_DEMO_MERCHANT_EMAIL:merchant@demo.securetransact.app}
+  simulator:
+    ambient-interval-ms: ${APP_SIMULATOR_AMBIENT_INTERVAL_MS:8000}
   swagger-enabled: ${APP_SWAGGER_ENABLED:false}
 
 server:

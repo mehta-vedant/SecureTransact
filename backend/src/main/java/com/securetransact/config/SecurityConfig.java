@@ -62,7 +62,7 @@ public class SecurityConfig {
                 if (swaggerEnabled) {
                     auth.requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll();
                 }
-                auth.requestMatchers("/api/admin/**", "/api/v1/admin/**").hasRole("ADMIN");
+                auth.requestMatchers("/api/admin/**", "/api/v1/admin/**", "/api/v1/demo/**").hasRole("ADMIN");
                 auth.anyRequest().authenticated();
             })
             .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
