@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, AlertTriangle, Users, Settings,
   Shield, LogOut, Bell, Menu, RefreshCw, AlertCircle,
-  FileText, Activity,
+  FileText, Activity, PlayCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { admin as adminApi } from '../services/api';
@@ -14,6 +14,7 @@ import FlaggedTable from '../components/admin/FlaggedTable';
 import AllAccountsTable from '../components/admin/AllAccountsTable';
 import RiskCasesTable from '../components/admin/RiskCasesTable';
 import AuditLogViewer from '../components/admin/AuditLogViewer';
+import DemoControls from '../components/admin/DemoControls';
 
 /* ── helpers ─────────────────────────────────────── */
 function greeting() {
@@ -32,6 +33,7 @@ const NAV = [
   { key: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { key: 'flagged',   icon: AlertTriangle,   label: 'Flagged' },
   { key: 'riskcases', icon: FileText,        label: 'Risk Cases' },
+  { key: 'demo',      icon: PlayCircle,      label: 'Live Demo' },
   { key: 'audit',     icon: Activity,        label: 'Audit Log' },
   { key: 'accounts',  icon: Users,           label: 'All Accounts' },
   { key: 'settings',  icon: Settings,        label: 'Settings' },
@@ -235,9 +237,9 @@ export default function AdminDashboardPage() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Auto-refresh metrics every 30s
+  // Auto-refresh metrics every 10s
   useEffect(() => {
-    intervalRef.current = setInterval(loadMetrics, 30000);
+    intervalRef.current = setInterval(loadMetrics, 10000);
     return () => clearInterval(intervalRef.current);
   }, [loadMetrics]);
 
@@ -510,6 +512,30 @@ export default function AdminDashboardPage() {
             </AnimatePresence>
           )}
 
+          {/* Live Demo tab */}
+          {activeTab === 'demo' && (
+            <AnimatePresence mode="wait">
+              <motion.div key="demo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <section>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                      Live Fraud Demo
+                    </h2>
+                    <PlayCircle size={14} color="var(--accent)" />
+                  </div>
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-xl)',
+                    padding: 20,
+                  }}>
+                    <DemoControls onEvent={() => { loadMetrics(); loadFlagged(0); }} />
+                  </div>
+                </section>
+              </motion.div>
+            </AnimatePresence>
+          )}
+
           {/* Audit Log tab */}
           {activeTab === 'audit' && (
             <AnimatePresence mode="wait">
@@ -537,7 +563,6 @@ export default function AdminDashboardPage() {
               </motion.div>
             </AnimatePresence>
           )}
-
           {/* Settings tab placeholder */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}

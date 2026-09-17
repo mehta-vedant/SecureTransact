@@ -212,3 +212,24 @@ export const auditEvents = {
     return apiCall(`/api/v1/audit-events/by-resource/${resourceType}/${resourceId}?${params}`);
   },
 };
+
+// ─── Live Demo Mode (admin) ─────────────────────
+export const demo = {
+  status: () =>
+    apiCall('/api/v1/demo/health'),
+
+  triggerRapidTransfer: () =>
+    apiCall('/api/v1/demo/trigger/rapid-transfer', { method: 'POST' }),
+
+  triggerHighVelocity: () =>
+    apiCall('/api/v1/demo/trigger/high-velocity', { method: 'POST' }),
+
+  triggerLargeAmount: () =>
+    apiCall('/api/v1/demo/trigger/large-amount', { method: 'POST' }),
+
+  triggerNewAccountLargeTxn: () =>
+    apiCall('/api/v1/demo/trigger/new-account-large-txn', { method: 'POST' }),
+
+  triggerBlacklistTransfer: () =>
+    apiCall('/api/v1/demo/trigger/blacklist-transfer', { method: 'POST' }),
+};
