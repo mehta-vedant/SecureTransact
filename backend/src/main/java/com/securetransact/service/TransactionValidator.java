@@ -34,8 +34,12 @@ public class TransactionValidator {
     }
 
     public Account validateAndGetToAccount(Long accountId) {
-        return accountRepository.findById(accountId)
+        Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Destination account not found"));
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new ConflictException("Destination account is not active");
+        }
+        return account;
     }
 
     public void validateSufficientBalance(Account account, BigDecimal amount) {

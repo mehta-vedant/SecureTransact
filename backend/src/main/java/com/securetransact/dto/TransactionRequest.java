@@ -4,6 +4,8 @@ import com.securetransact.model.TransactionType;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -27,8 +29,19 @@ public class TransactionRequest {
     @Size(max = 200, message = "Description must be at most 200 characters")
     private String description;
 
+    @NotBlank(message = "Idempotency key is required")
     @Size(max = 64, message = "Idempotency key must be at most 64 characters")
     private String idempotencyKey;
 
     private Boolean crossBorder;
+
+    @AssertTrue(message = "Transaction accounts do not match the selected transaction type")
+    public boolean isAccountShapeValid() {
+        if (type == null) return true;
+        return switch (type) {
+            case DEPOSIT -> toAccountId != null && fromAccountId == null;
+            case WITHDRAWAL -> fromAccountId != null && toAccountId == null;
+            case TRANSFER -> fromAccountId != null && toAccountId != null;
+        };
+    }
 }

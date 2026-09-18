@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 /**
  * Custom hook for calling async API functions with loading/error state.
@@ -17,9 +17,10 @@ export default function useApi(apiFn) {
   const mountedRef = useRef(true);
 
   // Track unmount to avoid state updates on unmounted component
-  useState(() => {
+  useEffect(() => {
+    mountedRef.current = true;
     return () => { mountedRef.current = false; };
-  });
+  }, []);
 
   const execute = useCallback(async (...args) => {
     setLoading(true);
