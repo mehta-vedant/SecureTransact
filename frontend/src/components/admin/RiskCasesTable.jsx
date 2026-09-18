@@ -12,7 +12,7 @@ const STATUS_COLORS = {
 
 const DECISION_OPTIONS = [
   { value: 'BLOCK', label: 'Block Transaction', color: 'var(--danger)', icon: XCircle },
-  { value: 'APPROVE', label: 'Approve Transaction', color: 'var(--success)', icon: CheckCircle },
+  { value: 'ALLOW', label: 'Approve Payment', color: 'var(--success)', icon: CheckCircle },
 ];
 
 function MobileRiskCaseCard({ c, onClick }) {
@@ -34,9 +34,9 @@ function MobileRiskCaseCard({ c, onClick }) {
           <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>#{c.id}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 40, height: 5, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(c.fraudScore ?? 0, 100)}%`, borderRadius: 3, background: (c.fraudScore ?? 0) > 70 ? 'var(--danger)' : (c.fraudScore ?? 0) > 40 ? 'var(--warning)' : 'var(--success)' }} />
+              <div style={{ height: '100%', width: `${Math.min(c.riskScore ?? 0, 100)}%`, borderRadius: 3, background: (c.riskScore ?? 0) > 70 ? 'var(--danger)' : (c.riskScore ?? 0) > 40 ? 'var(--warning)' : 'var(--success)' }} />
             </div>
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 12 }}>{c.fraudScore ?? '—'}</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 12 }}>{c.riskScore ?? '—'}</span>
           </div>
         </div>
         <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 700, background: style.bg, color: style.color }}>
@@ -44,7 +44,7 @@ function MobileRiskCaseCard({ c, onClick }) {
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{c.assignedTo || 'Unassigned'}</span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{c.assignedToName || 'Unassigned'}</span>
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
           {c.createdAt ? new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
         </span>
@@ -88,7 +88,7 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
       await riskCases.assign(id);
       setCases((prev) =>
         prev.map((c) =>
-          c.id === id ? { ...c, status: 'IN_REVIEW', assignedTo: 'Current Admin' } : c
+          c.id === id ? { ...c, status: 'IN_REVIEW', assignedToName: 'Current Admin' } : c
         )
       );
     } catch {
@@ -134,17 +134,18 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
               {[
                 ['Case ID', `#${selectedCase.id}`],
                 ['Transaction ID', selectedCase.transactionId],
-                ['Fraud Score', `${selectedCase.fraudScore ?? '—'} / 100`],
+                ['Risk Score', `${selectedCase.riskScore ?? '—'} / 100`],
+                ['Risk Level', selectedCase.riskLevel || '—'],
                 ['Status', selectedCase.status?.replace(/_/g, ' ')],
                 ['Created', fmtDate(selectedCase.createdAt)],
-                ['Assigned To', selectedCase.assignedTo || 'Unassigned'],
+                ['Assigned To', selectedCase.assignedToName || 'Unassigned'],
               ].map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>{label}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>{value}</span>
                 </div>
               ))}
-              {selectedCase.reviewNotes && (
+            {selectedCase.reviewNotes && (
                 <div style={{ marginTop: 4 }}>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 4 }}>Notes</span>
                   <p style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-body)', background: 'var(--bg-tertiary)', padding: '10px 12px', borderRadius: 'var(--radius-md)', margin: 0 }}>
@@ -162,6 +163,19 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                 >
                   <UserCheck size={14} /> Assign to Me
                 </button>
+              </div>
+            )}
+            {selectedCase.riskReasons && (
+              <div style={{ marginTop: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 4 }}>Why this payment was held</span>
+                <ul style={{ fontSize: 13, color: 'var(--text-primary)', background: 'var(--bg-tertiary)', padding: '10px 12px 10px 28px', borderRadius: 'var(--radius-md)', margin: 0, display: 'grid', gap: 6 }}>
+                  {selectedCase.riskReasons.split('||').map((reason) => <li key={reason}>{reason}</li>)}
+                </ul>
+                {selectedCase.anomalySignal != null && (
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '8px 0 0' }}>
+                    Anomaly signal: {Math.round(selectedCase.anomalySignal * 100)}% ({selectedCase.modelVersion || 'unknown model'})
+                  </p>
+                )}
               </div>
             )}
 
@@ -270,9 +284,9 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 60, height: 6, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(c.fraudScore ?? 0, 100)}%`, borderRadius: 3, background: (c.fraudScore ?? 0) > 70 ? 'var(--danger)' : (c.fraudScore ?? 0) > 40 ? 'var(--warning)' : 'var(--success)' }} />
+                      <div style={{ height: '100%', width: `${Math.min(c.riskScore ?? 0, 100)}%`, borderRadius: 3, background: (c.riskScore ?? 0) > 70 ? 'var(--danger)' : (c.riskScore ?? 0) > 40 ? 'var(--warning)' : 'var(--success)' }} />
                     </div>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 12 }}>{c.fraudScore ?? '—'}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 12 }}>{c.riskScore ?? '—'}</span>
                   </div>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
@@ -280,7 +294,7 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                     {c.status?.replace(/_/g, ' ')}
                   </span>
                 </td>
-                <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{c.assignedTo || '—'}</td>
+                <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{c.assignedToName || '—'}</td>
                 <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>{fmtDate(c.createdAt)}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <Clock size={14} color="var(--text-muted)" />

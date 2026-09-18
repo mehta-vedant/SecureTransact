@@ -15,6 +15,10 @@ public class RiskCaseResponse {
     private BigDecimal transactionAmount;
     private Long riskEvaluationId;
     private int riskScore;
+    private String riskLevel;
+    private String riskReasons;
+    private String modelVersion;
+    private BigDecimal anomalySignal;
     private CaseStatus status;
     private Long assignedToId;
     private String assignedToName;
@@ -41,6 +45,10 @@ public class RiskCaseResponse {
         if (rc.getRiskEvaluation() != null) {
             response.setRiskEvaluationId(rc.getRiskEvaluation().getId());
             response.setRiskScore(rc.getRiskEvaluation().getTotalScore());
+            response.setRiskLevel(rc.getRiskEvaluation().getRiskLevel().name());
+            response.setRiskReasons(rc.getRiskEvaluation().getReasons());
+            response.setModelVersion(rc.getRiskEvaluation().getModelVersion());
+            response.setAnomalySignal(rc.getRiskEvaluation().getMlProbability());
         }
         if (rc.getAssignedTo() != null) {
             response.setAssignedToId(rc.getAssignedTo().getId());
