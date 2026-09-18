@@ -156,6 +156,24 @@ public class TransactionService {
                 .map(TransactionResponse::from);
     }
 
+    @Transactional
+    @Auditable(action = AuditAction.TRANSACTION_REVERSED, resourceType = "TRANSACTION",
+            description = "Payment reversal requested")
+    public TransactionResponse reverseTransaction(Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new com.securetransact.exception.ResourceNotFoundException("Transaction not found"));
+
+        TransactionStatus reversalStatus = processor.reverseMoneyMovement(transaction);
+        if (reversalStatus != TransactionStatus.REVERSED) {
+            throw new ConflictException("Payment cannot be reversed in its current state");
+        }
+        transaction.setStatus(TransactionStatus.REVERSED);
+        transactionRepository.save(transaction);
+        auditService.recordEvent(AuditAction.TRANSACTION_REVERSED, "TRANSACTION", transaction.getId(),
+                "Settled payment reversed through compensating ledger entries", null, null, null);
+        return TransactionResponse.from(transaction);
+    }
+
     private String formatReasons(RiskEngineResult result) {
         if (result.getScoringResult().getFactors() == null || result.getScoringResult().getFactors().isEmpty()) {
             return "";

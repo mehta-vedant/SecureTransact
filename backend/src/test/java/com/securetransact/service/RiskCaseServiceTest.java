@@ -28,6 +28,7 @@ class RiskCaseServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private UserRepository userRepository;
     @Mock private TransactionProcessor processor;
+    @Mock private LedgerPostingService ledgerPostingService;
 
     @InjectMocks
     private RiskCaseService riskCaseService;

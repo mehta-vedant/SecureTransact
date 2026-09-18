@@ -14,6 +14,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -47,5 +48,12 @@ public class TransactionControllerV1 {
             @AuthenticationPrincipal CustomUserDetails user,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(transactionService.getTransactionHistory(user.getId(), pageable));
+    }
+
+    @PostMapping("/{transactionId}/reverse")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reverse a settled payment with compensating ledger entries")
+    public ResponseEntity<TransactionResponse> reverseTransaction(@PathVariable Long transactionId) {
+        return ResponseEntity.ok(transactionService.reverseTransaction(transactionId));
     }
 }
