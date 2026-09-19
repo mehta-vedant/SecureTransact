@@ -10,6 +10,7 @@ import com.securetransact.repository.RiskCaseRepository;
 import com.securetransact.repository.RiskCaseEventRepository;
 import com.securetransact.repository.TransactionRepository;
 import com.securetransact.repository.UserRepository;
+import com.securetransact.risk.BehavioralProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ public class RiskCaseService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final TransactionProcessor processor;
+    private final BehavioralProfileService behavioralProfileService;
 
     @Transactional
     public RiskCase createRiskCase(Transaction transaction, RiskEvaluation evaluation) {
@@ -106,6 +108,10 @@ public class RiskCaseService {
                 riskCase.setStatus(CaseStatus.APPROVED);
                 TransactionStatus settlementStatus = processor.processMoneyMovement(transaction);
                 transaction.setStatus(settlementStatus);
+                if (settlementStatus == TransactionStatus.SETTLED) {
+                    Account sourceAccount = transaction.getFromAccount() != null ? transaction.getFromAccount() : transaction.getToAccount();
+                    behavioralProfileService.updateProfileAfterTransaction(sourceAccount, transaction.getAmount());
+                }
             }
             case BLOCK -> {
                 riskCase.setStatus(CaseStatus.REJECTED);

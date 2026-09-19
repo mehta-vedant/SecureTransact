@@ -18,6 +18,8 @@ from sklearn.preprocessing import StandardScaler
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 MODEL_PATH = os.path.join(MODEL_DIR, "risk_model.pkl")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
+CALIBRATION_PATH = os.path.join(MODEL_DIR, "anomaly_calibration.pkl")
+MODEL_VERSION = "isolation-forest-anomaly-v2"
 
 
 def generate_synthetic_data(n_samples: int = 10_000) -> np.ndarray:
@@ -48,13 +50,6 @@ def generate_synthetic_data(n_samples: int = 10_000) -> np.ndarray:
         cross_border, new_payee,
     ])
 
-    # Inject ~2% obvious fraud patterns (high amount, high z-score, high velocity)
-    fraud_idx = rng.choice(n_samples, size=int(n_samples * 0.02), replace=False)
-    X[fraud_idx, 0] *= 10          # 10x amount
-    X[fraud_idx, 3] = rng.uniform(3, 6, size=len(fraud_idx))  # high z-score
-    X[fraud_idx, 5] = rng.integers(5, 15, size=len(fraud_idx))
-    X[fraud_idx, 6] = rng.integers(20, 60, size=len(fraud_idx))
-
     return X
 
 
@@ -67,19 +62,28 @@ def train() -> None:
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    print("Training IsolationForest (contamination=0.02)...")
+    print("Training IsolationForest on the synthetic benign baseline...")
     model = IsolationForest(
         n_estimators=200,
-        contamination=0.02,
+        contamination="auto",
         max_samples="auto",
         random_state=42,
         n_jobs=-1,
     )
     model.fit(X_scaled)
 
+    # IsolationForest output ranks observations but is not a fraud probability. Persist
+    # benign score quantiles so serving returns an empirical anomaly percentile.
+    calibration = {
+        "model_version": MODEL_VERSION,
+        "feature_count": X.shape[1],
+        "benign_anomaly_scores": np.sort(-model.score_samples(X_scaled)),
+    }
+
     os.makedirs(MODEL_DIR, exist_ok=True)
     joblib.dump(model, MODEL_PATH)
     joblib.dump(scaler, SCALER_PATH)
+    joblib.dump(calibration, CALIBRATION_PATH)
     print(f"Model saved to {MODEL_PATH}")
     print(f"Scaler saved to {SCALER_PATH}")
 

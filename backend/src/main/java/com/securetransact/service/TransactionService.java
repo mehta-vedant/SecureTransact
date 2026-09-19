@@ -11,6 +11,7 @@ import com.securetransact.risk.RiskDecisionEngine;
 import com.securetransact.risk.RiskEngineResult;
 import com.securetransact.risk.RiskEngineService;
 import com.securetransact.risk.RiskScoringResult;
+import com.securetransact.risk.BehavioralProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,6 +35,7 @@ public class TransactionService {
     private final RiskCaseService riskCaseService;
     private final AuditService auditService;
     private final RiskEvaluationRepository riskEvaluationRepository;
+    private final BehavioralProfileService behavioralProfileService;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Auditable(action = AuditAction.TRANSACTION_CREATED, resourceType = "TRANSACTION",
@@ -110,6 +112,7 @@ public class TransactionService {
                 transaction.setStatus(settlementStatus);
 
                 if (settlementStatus == TransactionStatus.SETTLED) {
+                    behavioralProfileService.updateProfileAfterTransaction(sourceAccount, transaction.getAmount());
                     auditService.recordEvent(AuditAction.TRANSACTION_SETTLED, "TRANSACTION",
                             transaction.getId(), "Auto-settled after risk evaluation", null, null, null);
                 } else {

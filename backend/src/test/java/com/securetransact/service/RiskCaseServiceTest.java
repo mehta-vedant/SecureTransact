@@ -8,6 +8,7 @@ import com.securetransact.repository.RiskCaseRepository;
 import com.securetransact.repository.RiskCaseEventRepository;
 import com.securetransact.repository.TransactionRepository;
 import com.securetransact.repository.UserRepository;
+import com.securetransact.risk.BehavioralProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ class RiskCaseServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private TransactionProcessor processor;
     @Mock private LedgerPostingService ledgerPostingService;
+    @Mock private BehavioralProfileService behavioralProfileService;
 
     @InjectMocks
     private RiskCaseService riskCaseService;

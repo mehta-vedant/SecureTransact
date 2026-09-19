@@ -21,7 +21,6 @@ public class RiskEngineService {
 
     private final StatisticalRiskScoringService statisticalScoringService;
     private final RiskDecisionEngine decisionEngine;
-    private final BehavioralProfileService behavioralProfileService;
     private final InProcessAnomalyScorer inProcessAnomalyScorer;
     private final RiskScoringClient riskScoringClient;
     private final MlFeatureCollector featureCollector;
@@ -38,8 +37,6 @@ public class RiskEngineService {
 
         var decision = decisionEngine.decide(scoringResult.getRiskLevel(), scoringResult.getTotalScore());
         scoringResult.setDecision(decision);
-
-        behavioralProfileService.updateProfileAfterTransaction(sourceAccount, transaction.getAmount());
 
         log.info("Risk evaluation for txn {}: score={}, level={}, decision={}, factors={}, anomaly={}, ml={}",
                 transaction.getId(), scoringResult.getTotalScore(), scoringResult.getRiskLevel(),
@@ -99,12 +96,12 @@ public class RiskEngineService {
         if (mlScore.riskScore() >= 80) {
             points = 15;
             code = "ML_ANOMALY_BLOCK_INDICATED";
-            message = "Remote ML model indicates high anomaly (score " + mlScore.riskScore()
+            message = "Experimental ML anomaly signal is at percentile " + mlScore.riskScore()
                     + ", model " + mlScore.modelVersion() + ")";
         } else if (mlScore.riskScore() >= 50) {
             points = 10;
             code = "ML_ANOMALY_FLAGGED";
-            message = "Remote ML model flagged anomaly (score " + mlScore.riskScore()
+            message = "Experimental ML anomaly signal is elevated at percentile " + mlScore.riskScore()
                     + ", model " + mlScore.modelVersion() + ")";
         } else {
             return;

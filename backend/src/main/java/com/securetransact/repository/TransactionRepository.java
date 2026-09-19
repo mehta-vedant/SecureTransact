@@ -44,6 +44,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.toAccount.id = :toAccountId")
     long countTransfersToAccount(@Param("fromAccountId") Long fromAccountId, @Param("toAccountId") Long toAccountId);
 
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccount.id = :accountId AND t.createdAt > :since AND t.id <> :excludedTransactionId")
+    long countRecentTransactionsBeforeDecision(@Param("accountId") Long accountId, @Param("since") LocalDateTime since,
+                                               @Param("excludedTransactionId") Long excludedTransactionId);
+
+    @Query("SELECT COUNT(DISTINCT t.toAccount.id) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.toAccount.id IS NOT NULL AND t.createdAt > :since AND t.id <> :excludedTransactionId")
+    long countDistinctRecipientsBeforeDecision(@Param("fromAccountId") Long fromAccountId, @Param("since") LocalDateTime since,
+                                               @Param("excludedTransactionId") Long excludedTransactionId);
+
+    @Query("SELECT COALESCE(AVG(t.amount), 0) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.createdAt > :since AND t.id <> :excludedTransactionId")
+    BigDecimal avgAmountBeforeDecision(@Param("fromAccountId") Long fromAccountId, @Param("since") LocalDateTime since,
+                                       @Param("excludedTransactionId") Long excludedTransactionId);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccount.id = :fromAccountId AND t.toAccount.id = :toAccountId AND t.id <> :excludedTransactionId")
+    long countTransfersToAccountBeforeDecision(@Param("fromAccountId") Long fromAccountId, @Param("toAccountId") Long toAccountId,
+                                               @Param("excludedTransactionId") Long excludedTransactionId);
+
     // Dashboard metrics
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.createdAt > :since")
     long countTransactionsSince(@Param("since") LocalDateTime since);

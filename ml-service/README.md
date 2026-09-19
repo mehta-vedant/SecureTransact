@@ -12,9 +12,9 @@ IsolationForest + StandardScaler
 { riskScore: 0-100, decision: ALLOW|HOLD_FOR_REVIEW|BLOCK }
 ```
 
-> Note: this service is not wired into the Java backend's live decision path. The Java
-> risk engine (`StatisticalRiskScoringService`) is self-contained; this ML scorer is kept
-> as a standalone experiment.
+> The Spring Boot risk engine calls this service as an optional, time-bounded secondary
+> signal. It must never be the sole reason to decline a payment: if unavailable, the
+> backend continues with explainable rules and its in-process heuristic.
 
 ## Running Locally
 
@@ -49,9 +49,10 @@ Request:
 Response:
 ```json
 {
-  "riskScore": 72,
-  "decision": "HOLD_FOR_REVIEW",
-  "modelVersion": "isolation-forest-v1",
+  "riskScore": 98,
+  "decision": "ANOMALY_ELEVATED",
+  "scoreType": "benign_baseline_anomaly_percentile",
+  "modelVersion": "isolation-forest-anomaly-v2",
   "features": { ... }
 }
 ```
@@ -88,5 +89,6 @@ docker run -p 5001:5001 securetransact-ml
 ## Model
 
 - **Algorithm**: IsolationForest (scikit-learn 1.6)
-- **Training**: Synthetic data with ~2% injected fraud patterns
-- **Swap-ready**: Replace `models/risk_model.pkl` with a real trained model
+- **Training**: Synthetic benign baseline only; this is a demo artifact, not a fraud model.
+- **Scoring**: Empirical percentile versus the benign training score distribution, not fraud probability.
+- **Swap-ready**: Real deployment requires representative payment data, calibration, and model governance.

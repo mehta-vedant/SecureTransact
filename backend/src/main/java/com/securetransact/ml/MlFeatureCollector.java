@@ -28,15 +28,15 @@ public class MlFeatureCollector {
                 : Optional.empty();
 
         long txnCount1h = accountId != null
-                ? transactionRepository.countRecentTransactions(accountId, now.minusHours(1)) : 0;
+                ? transactionRepository.countRecentTransactionsBeforeDecision(accountId, now.minusHours(1), transaction.getId()) : 0;
         long txnCount24h = accountId != null
-                ? transactionRepository.countRecentTransactions(accountId, now.minusHours(24)) : 0;
+                ? transactionRepository.countRecentTransactionsBeforeDecision(accountId, now.minusHours(24), transaction.getId()) : 0;
         BigDecimal avgAmount7d = accountId != null
-                ? transactionRepository.avgAmountSince(accountId, now.minusDays(7)) : BigDecimal.ZERO;
+                ? transactionRepository.avgAmountBeforeDecision(accountId, now.minusDays(7), transaction.getId()) : BigDecimal.ZERO;
         long uniqueRecipients24h = accountId != null
-                ? transactionRepository.countDistinctRecipientsSince(accountId, now.minusHours(24)) : 0;
+                ? transactionRepository.countDistinctRecipientsBeforeDecision(accountId, now.minusHours(24), transaction.getId()) : 0;
         boolean isNewPayee = accountId != null && transaction.getToAccount() != null
-                ? transactionRepository.countTransfersToAccount(accountId, transaction.getToAccount().getId()) == 0
+                ? transactionRepository.countTransfersToAccountBeforeDecision(accountId, transaction.getToAccount().getId(), transaction.getId()) == 0
                 : false;
 
         return new MlFeaturesRequest(
