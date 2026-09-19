@@ -25,6 +25,7 @@ import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import average_precision_score, brier_score_loss, precision_recall_curve, roc_auc_score
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
 FEATURE_NAMES = [
@@ -127,14 +128,29 @@ def train(csv_path: Path, output_dir: Path) -> dict:
     X_train_scaled = scaler.fit_transform(X_train)
     X_validation_scaled = scaler.transform(X_validation)
     X_test_scaled = scaler.transform(X_test)
-    base_model = HistGradientBoostingClassifier(learning_rate=0.08, max_leaf_nodes=15, l2_regularization=1.0, class_weight="balanced", random_state=42)
-    base_model.fit(X_train_scaled, y_train)
-    calibrated = CalibratedClassifierCV(base_model, method="isotonic", cv="prefit")
-    calibrated.fit(X_validation_scaled, y_validation)
+    candidates = {
+        "logistic_regression": LogisticRegression(class_weight="balanced", max_iter=1_000, random_state=42),
+        "hist_gradient_boosting": HistGradientBoostingClassifier(learning_rate=0.08, max_leaf_nodes=15, l2_regularization=1.0, class_weight="balanced", random_state=42),
+    }
+    calibrated_candidates = {}
+    validation_metrics = {}
+    for name, base_model in candidates.items():
+        base_model.fit(X_train_scaled, y_train)
+        calibrated = CalibratedClassifierCV(base_model, method="isotonic", cv="prefit")
+        calibrated.fit(X_validation_scaled, y_validation)
+        validation_probabilities = calibrated.predict_proba(X_validation_scaled)[:, 1]
+        calibrated_candidates[name] = calibrated
+        validation_metrics[name] = {
+            "pr_auc": float(average_precision_score(y_validation, validation_probabilities)),
+            "brier_score": float(brier_score_loss(y_validation, validation_probabilities)),
+        }
+    selected_model_name = max(validation_metrics, key=lambda name: validation_metrics[name]["pr_auc"])
+    calibrated = calibrated_candidates[selected_model_name]
     probabilities = calibrated.predict_proba(X_test_scaled)[:, 1]
     metrics = {
         "model_version": MODEL_VERSION, "dataset": "AMLNet August 2025 (synthetic benchmark)",
-        "label": "isFraud", "feature_schema": FEATURE_NAMES,
+        "label": "isFraud", "feature_schema": FEATURE_NAMES, "selected_model": selected_model_name,
+        "validation_model_comparison": validation_metrics,
         "rows": int(len(frame)), "fraud_rows": int(y.sum()),
         "splits": {"train": int(len(y_train)), "validation": int(len(y_validation)), "test": int(len(y_test))},
         "test": {"positive_rate": float(y_test.mean()), "pr_auc": float(average_precision_score(y_test, probabilities)), "roc_auc": float(roc_auc_score(y_test, probabilities)), "brier_score": float(brier_score_loss(y_test, probabilities)), "operating_point": _threshold_at_precision(y_test, probabilities)},

@@ -98,7 +98,8 @@ docker run -p 5001:5001 securetransact-ml
 `securetransact_ml.train_amlnet` is the reproducible, offline experiment for
 AMLNet, a synthetic payment-network dataset. It derives the same 11 online-safe
 features used by the service from prior transaction history, then uses a temporal
-split, a class-balanced gradient-boosting model, and validation-window calibration.
+split, compares a class-balanced logistic baseline with gradient boosting, selects
+by validation PR-AUC, and calibrates on the validation window.
 
 ```bash
 python -m securetransact_ml.train_amlnet --input data/raw/AMLNet_August_2025.csv
