@@ -84,24 +84,21 @@ public class RiskEngineService {
     }
 
     /**
-     * Blends a remote ML score as an optional secondary signal. Only called when the ML
-     * client is enabled and reachable; it appends a small overlay but never replaces the
-     * in-process anomaly boost.
+     * Records a remote ML score as an advisory-only analyst signal. A benchmark-trained
+     * model must not alter an allow/hold/block decision; deterministic controls remain
+     * authoritative until a separately approved production promotion.
      */
     private void applyMlBoost(RiskScoringResult scoringResult, MlScore mlScore) {
-        int points;
         String code;
         String message;
 
         if (mlScore.riskScore() >= 80) {
-            points = 15;
-            code = "ML_ANOMALY_BLOCK_INDICATED";
-            message = "Experimental ML anomaly signal is at percentile " + mlScore.riskScore()
+            code = "ML_ADVISORY_HIGH";
+            message = "Experimental ML advisory signal is high (score " + mlScore.riskScore()
                     + ", model " + mlScore.modelVersion() + ")";
         } else if (mlScore.riskScore() >= 50) {
-            points = 10;
-            code = "ML_ANOMALY_FLAGGED";
-            message = "Experimental ML anomaly signal is elevated at percentile " + mlScore.riskScore()
+            code = "ML_ADVISORY_ELEVATED";
+            message = "Experimental ML advisory signal is elevated (score " + mlScore.riskScore()
                     + ", model " + mlScore.modelVersion() + ")";
         } else {
             return;
@@ -112,11 +109,9 @@ public class RiskEngineService {
                     .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
         }
         scoringResult.setModelVersion(scoringResult.getModelVersion() + "+" + mlScore.modelVersion());
-        scoringResult.setTotalScore(Math.min(scoringResult.getTotalScore() + points, 100));
-        scoringResult.setRiskLevel(StatisticalRiskScoringService.determineRiskLevel(scoringResult.getTotalScore()));
         scoringResult.getFactors().add(RiskFactor.builder()
                 .code(code)
-                .points(points)
+                .points(0)
                 .message(message)
                 .build());
     }
