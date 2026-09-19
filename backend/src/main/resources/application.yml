@@ -32,7 +32,9 @@ app:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
   ml:
-    enabled: ${APP_ML_ENABLED:true}
+    # Synthetic-baseline IsolationForest is experimental. Enable only for the controlled
+    # demo sidecar; policy rules and human review remain the default decision path.
+    enabled: ${APP_ML_ENABLED:false}
     base-url: ${APP_ML_BASE_URL:http://localhost:5001}
     timeout-ms: ${APP_ML_TIMEOUT_MS:500}
   demo:
