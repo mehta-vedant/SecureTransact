@@ -1,6 +1,7 @@
 package com.securetransact.controller.v1;
 
 import com.securetransact.dto.TransactionResponse;
+import com.securetransact.config.DemoDataSeeder;
 import com.securetransact.simulator.TransactionSimulator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,14 @@ import java.util.Map;
 public class DemoModeControllerV1 {
 
     private final TransactionSimulator simulator;
+    private final DemoDataSeeder demoDataSeeder;
+
+    @PostMapping("/initialize")
+    @Operation(summary = "Initialize isolated demo accounts on explicit admin request")
+    public ResponseEntity<Map<String, Object>> initialize() {
+        boolean created = demoDataSeeder.seedDemoData();
+        return ResponseEntity.ok(Map.of("created", created, "demoMode", simulator.isReady()));
+    }
 
     @GetMapping("/health")
     @Operation(summary = "Check demo mode readiness")

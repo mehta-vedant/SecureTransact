@@ -161,7 +161,7 @@ public class TransactionSimulator {
     }
 
     public boolean isReady() {
-        return demoEnabled && aliceSavingsAccount() != null && destinationAccountOf(merchantEmail) != null;
+        return aliceSavingsAccount() != null && destinationAccountOf(merchantEmail) != null;
     }
 
     private Account merchantAccount() {

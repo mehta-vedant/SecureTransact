@@ -55,9 +55,14 @@ public class DemoDataSeeder implements CommandLineRunner {
             log.info("Demo data seeding disabled (app.demo.enabled=false)");
             return;
         }
+        seedDemoData();
+    }
+
+    /** Creates demo data only when an administrator explicitly requests it. */
+    public boolean seedDemoData() {
         if (userRepository.existsByEmail(sourceEmail)) {
             log.info("Demo data already seeded; skipping");
-            return;
+            return false;
         }
 
         User alice = userRepository.save(User.builder()
@@ -118,6 +123,7 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         log.info("Seeded demo data: alice={}, merchant={}, blocked={}",
                 alice.getId(), merchant.getId(), blockedAccount.getId());
+        return true;
     }
 
     private Account saveAccount(User owner, String type, String balance) {

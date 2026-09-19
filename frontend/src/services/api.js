@@ -234,6 +234,7 @@ export const auditEvents = {
 
 // ─── Live Demo Mode (admin) ─────────────────────
 export const demo = {
+  initialize: () => apiCall('/api/v1/demo/initialize', { method: 'POST' }),
   status: () =>
     apiCall('/api/v1/demo/health'),
 

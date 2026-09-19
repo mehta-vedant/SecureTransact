@@ -73,6 +73,19 @@ export default function DemoControls({ onEvent }) {
   const [results, setResults] = useState([]);
   const [statusMsg, setStatusMsg] = useState('');
 
+  const initializeDemo = async () => {
+    setBusy('initialize');
+    try {
+      const data = await demo.initialize();
+      setReady(!!data?.demoMode);
+      setStatusMsg(data?.created ? 'Demo accounts initialized. Choose a scenario below.' : 'Demo accounts are already initialized.');
+    } catch (err) {
+      setStatusMsg(`Initialization failed: ${err.message || 'unknown error'}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const loadStatus = useCallback(async () => {
     try {
       const data = await demo.status();
@@ -132,8 +145,8 @@ export default function DemoControls({ onEvent }) {
       }}>
         <Radio size={14} />
         {ready
-          ? 'Demo mode is live — ambient traffic streams to the audit log; fire a scenario to see the engine flag it.'
-          : 'Demo mode is off (APP_DEMO_ENABLED=false). Enable it on the backend to use the live simulator.'}
+          ? 'Demo accounts are ready — manually run a scenario to see the engine flag it.'
+          : 'Demo accounts are not initialized. Initialize them once to enable manual scenarios.'}
         <button
           onClick={loadStatus}
           title="Re-check"
@@ -142,6 +155,16 @@ export default function DemoControls({ onEvent }) {
           <RefreshCw size={12} />
         </button>
       </div>
+
+      {!ready && (
+        <button
+          onClick={initializeDemo}
+          disabled={!!busy}
+          style={{ alignSelf: 'flex-start', padding: '9px 14px', borderRadius: 'var(--radius-md)', border: 'none', background: 'var(--accent)', color: 'white', fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}
+        >
+          {busy === 'initialize' ? 'Initializing demo accounts…' : 'Initialize demo accounts'}
+        </button>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
         {SCENARIOS.map((s) => {
