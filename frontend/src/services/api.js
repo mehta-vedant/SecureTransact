@@ -180,6 +180,12 @@ export const admin = {
     const params = new URLSearchParams({ page, size });
     return apiCall(`/api/admin/accounts?${params}`);
   },
+
+  freezeAccount: (id, reason) =>
+    apiCall(`/api/v1/admin/accounts/${id}/freeze`, { method: 'POST', body: JSON.stringify({ reason }) }),
+
+  unfreezeAccount: (id, reason) =>
+    apiCall(`/api/v1/admin/accounts/${id}/unfreeze`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };
 
 // ─── Risk Cases ─────────────────────────────────

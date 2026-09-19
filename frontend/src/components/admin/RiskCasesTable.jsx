@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { riskCases } from '../../services/api';
+import { admin, riskCases } from '../../services/api';
 import { AlertTriangle, UserCheck, CheckCircle, XCircle, Clock, Eye, Inbox } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -124,6 +124,19 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
     }
   };
 
+  const handleFreezePayer = async () => {
+    if (!selectedCase?.fromAccountId) return;
+    setActionLoading(true);
+    try {
+      await admin.freezeAccount(selectedCase.fromAccountId, `Frozen from risk case #${selectedCase.id}`);
+      const updated = await riskCases.addNote(selectedCase.id, 'Payer account frozen from this case.');
+      setSelectedCase(updated);
+      loadCases(controlledPage ?? 0);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const fmt = (amount) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
@@ -210,6 +223,12 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                   style={{ border: '1px solid var(--accent)', background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-md)', padding: '0 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Add</button>
               </div>
             </div>
+            {selectedCase.fromAccountId && selectedCase.status !== 'APPROVED' && (
+              <button onClick={handleFreezePayer} disabled={actionLoading}
+                style={{ width: '100%', marginTop: 12, padding: '9px 0', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Freeze payer account
+              </button>
+            )}
 
             {selectedCase.status === 'IN_REVIEW' && (
               <div style={{ marginTop: 20 }}>

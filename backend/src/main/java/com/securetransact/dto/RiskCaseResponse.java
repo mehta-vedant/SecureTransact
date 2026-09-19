@@ -14,6 +14,8 @@ public class RiskCaseResponse {
     private Long id;
     private Long transactionId;
     private BigDecimal transactionAmount;
+    private Long fromAccountId;
+    private Long toAccountId;
     private Long riskEvaluationId;
     private int riskScore;
     private String riskLevel;
@@ -45,6 +47,8 @@ public class RiskCaseResponse {
         if (rc.getTransaction() != null) {
             response.setTransactionId(rc.getTransaction().getId());
             response.setTransactionAmount(rc.getTransaction().getAmount());
+            if (rc.getTransaction().getFromAccount() != null) response.setFromAccountId(rc.getTransaction().getFromAccount().getId());
+            if (rc.getTransaction().getToAccount() != null) response.setToAccountId(rc.getTransaction().getToAccount().getId());
         }
         if (rc.getRiskEvaluation() != null) {
             response.setRiskEvaluationId(rc.getRiskEvaluation().getId());
