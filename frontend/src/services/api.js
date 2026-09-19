@@ -200,6 +200,12 @@ export const riskCases = {
       method: 'PATCH',
       body: JSON.stringify({ decision, reviewNotes }),
     }),
+
+  addNote: (id, note) =>
+    apiCall(`/api/v1/admin/risk-cases/${id}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
 };
 
 // ─── Audit Events ───────────────────────────────

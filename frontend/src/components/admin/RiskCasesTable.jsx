@@ -59,6 +59,7 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
   const [selectedCase, setSelectedCase] = useState(null);
   const [deciding, setDeciding] = useState(null);
   const [notes, setNotes] = useState('');
+  const [caseNote, setCaseNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -110,6 +111,19 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
     }
   };
 
+  const handleAddNote = async (id) => {
+    if (!caseNote.trim()) return;
+    setActionLoading(true);
+    try {
+      const updated = await riskCases.addNote(id, caseNote);
+      setSelectedCase(updated);
+      setCaseNote('');
+      loadCases(controlledPage ?? 0);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const fmt = (amount) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
@@ -136,6 +150,7 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                 ['Transaction ID', selectedCase.transactionId],
                 ['Risk Score', `${selectedCase.riskScore ?? '—'} / 100`],
                 ['Risk Level', selectedCase.riskLevel || '—'],
+                ['Priority', selectedCase.priority || 'MEDIUM'],
                 ['Status', selectedCase.status?.replace(/_/g, ' ')],
                 ['Created', fmtDate(selectedCase.createdAt)],
                 ['Assigned To', selectedCase.assignedToName || 'Unassigned'],
@@ -178,6 +193,23 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
                 )}
               </div>
             )}
+            <div style={{ marginTop: 16 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Case timeline</span>
+              <div style={{ display: 'grid', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                {(selectedCase.timeline ?? []).map((event, index) => (
+                  <div key={`${event.createdAt}-${index}`} style={{ borderLeft: '2px solid var(--accent)', paddingLeft: 10 }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-primary)', margin: 0 }}>{event.message}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{event.actorName || 'System'} · {fmtDate(event.createdAt)}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <input value={caseNote} onChange={(e) => setCaseNote(e.target.value)} placeholder="Add investigation note"
+                  style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)' }} />
+                <button onClick={() => handleAddNote(selectedCase.id)} disabled={actionLoading || !caseNote.trim()}
+                  style={{ border: '1px solid var(--accent)', background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-md)', padding: '0 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Add</button>
+              </div>
+            </div>
 
             {selectedCase.status === 'IN_REVIEW' && (
               <div style={{ marginTop: 20 }}>
