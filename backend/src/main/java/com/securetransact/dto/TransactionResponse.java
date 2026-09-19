@@ -20,6 +20,13 @@ public class TransactionResponse {
     private String riskLevel;
     private String riskDecision;
     private String description;
+    private String paymentReference;
+    private String currency;
+    private String rail;
+    private String channel;
+    private String deviceId;
+    private String payerCountry;
+    private String beneficiaryCountry;
     private Long fromAccountId;
     private Long toAccountId;
     private String fromAccountNumber;
@@ -40,6 +47,13 @@ public class TransactionResponse {
             response.setRiskDecision(RiskDecisionEngine.fromScore(txn.getRiskScore()).name());
         }
         response.setDescription(txn.getDescription());
+        response.setPaymentReference(txn.getPaymentReference());
+        response.setCurrency(txn.getCurrency());
+        response.setRail(txn.getRail() == null ? null : txn.getRail().name());
+        response.setChannel(txn.getChannel() == null ? null : txn.getChannel().name());
+        response.setDeviceId(txn.getDeviceId());
+        response.setPayerCountry(txn.getPayerCountry());
+        response.setBeneficiaryCountry(txn.getBeneficiaryCountry());
         response.setIdempotencyKey(txn.getIdempotencyKey());
         response.setCrossBorder(txn.isCrossBorder());
         response.setCreatedAt(txn.getCreatedAt());

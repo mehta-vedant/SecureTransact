@@ -13,8 +13,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LedgerPostingService {
 
-    private static final String DEMO_CURRENCY = "USD";
-
     private final LedgerEntryRepository ledgerEntryRepository;
 
     public void postSettlement(Transaction transaction) {
@@ -49,6 +47,7 @@ public class LedgerPostingService {
 
     private LedgerEntry entry(Transaction transaction, Account account, LedgerDirection direction, LedgerEntryType type) {
         return LedgerEntry.builder().transaction(transaction).account(account).direction(direction)
-                .entryType(type).amount(transaction.getAmount()).currency(DEMO_CURRENCY).build();
+                .entryType(type).amount(transaction.getAmount())
+                .currency(transaction.getCurrency() == null ? "USD" : transaction.getCurrency()).build();
     }
 }

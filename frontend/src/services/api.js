@@ -124,12 +124,12 @@ export const accounts = {
 
 // ─── Transactions ─────────────────────────────────────
 export const transactions = {
-  create: ({ type, amount, fromAccountId, toAccountId, description, crossBorder = false, idempotencyKey }) =>
+  create: ({ type, amount, fromAccountId, toAccountId, description, crossBorder = false, idempotencyKey, currency, channel, deviceId, payerCountry, beneficiaryCountry }) =>
     apiCall('/api/transactions', {
       method: 'POST',
       body: JSON.stringify({
         type, amount, fromAccountId, toAccountId, description, crossBorder,
-        idempotencyKey: idempotencyKey || crypto.randomUUID(),
+        idempotencyKey: idempotencyKey || crypto.randomUUID(), currency, channel, deviceId, payerCountry, beneficiaryCountry,
       }),
     }),
 

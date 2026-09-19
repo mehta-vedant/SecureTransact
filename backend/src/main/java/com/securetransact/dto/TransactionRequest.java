@@ -1,6 +1,7 @@
 package com.securetransact.dto;
 
 import com.securetransact.model.TransactionType;
+import com.securetransact.model.PaymentChannel;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +35,20 @@ public class TransactionRequest {
     private String idempotencyKey;
 
     private Boolean crossBorder;
+
+    @Size(min = 3, max = 3, message = "Currency must be a 3-letter code")
+    private String currency;
+
+    private PaymentChannel channel;
+
+    @Size(max = 255, message = "Device ID must be at most 255 characters")
+    private String deviceId;
+
+    @Size(min = 2, max = 2, message = "Payer country must be a 2-letter code")
+    private String payerCountry;
+
+    @Size(min = 2, max = 2, message = "Beneficiary country must be a 2-letter code")
+    private String beneficiaryCountry;
 
     @AssertTrue(message = "Transaction accounts do not match the selected transaction type")
     public boolean isAccountShapeValid() {

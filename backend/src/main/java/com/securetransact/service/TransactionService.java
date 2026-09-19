@@ -71,7 +71,12 @@ public class TransactionService {
                 .status(TransactionStatus.CREATED)
                 .idempotencyKey(request.getIdempotencyKey())
                 .description(request.getDescription())
-                .crossBorder(request.getCrossBorder() != null && request.getCrossBorder())
+                .currency(normalizeCurrency(request.getCurrency()))
+                .channel(request.getChannel() == null ? PaymentChannel.WEB : request.getChannel())
+                .deviceId(request.getDeviceId())
+                .payerCountry(normalizeCountry(request.getPayerCountry()))
+                .beneficiaryCountry(normalizeCountry(request.getBeneficiaryCountry()))
+                .crossBorder(isCrossBorder(request))
                 .build();
 
         try {
@@ -182,5 +187,19 @@ public class TransactionService {
                 .map(f -> f.getCode() + ": " + f.getMessage() + " (+" + f.getPoints() + ")")
                 .reduce((a, b) -> a + "||" + b)
                 .orElse("");
+    }
+
+    private boolean isCrossBorder(TransactionRequest request) {
+        String payerCountry = normalizeCountry(request.getPayerCountry());
+        String beneficiaryCountry = normalizeCountry(request.getBeneficiaryCountry());
+        return payerCountry != null && beneficiaryCountry != null && !payerCountry.equals(beneficiaryCountry);
+    }
+
+    private String normalizeCountry(String country) {
+        return country == null || country.isBlank() ? null : country.trim().toUpperCase();
+    }
+
+    private String normalizeCurrency(String currency) {
+        return currency == null || currency.isBlank() ? "USD" : currency.trim().toUpperCase();
     }
 }
