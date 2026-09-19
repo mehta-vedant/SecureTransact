@@ -61,12 +61,18 @@ def _trim(events: Deque[tuple[int, float, str]], event_hour: int) -> None:
 
 
 def build_feature_frame(csv_path: Path, chunksize: int = 50_000) -> pd.DataFrame:
-    """Stream AMLNet and construct causal features in source-time order."""
+    """Order AMLNet by event time and construct causal account-history features."""
     histories: dict[str, AccountHistory] = {}
     rows: list[list[float]] = []
     labels: list[int] = []
     last_hour = -1
-    reader = pd.read_csv(csv_path, usecols=USE_COLUMNS, chunksize=chunksize, on_bad_lines="skip")
+    raw = pd.read_csv(csv_path, usecols=USE_COLUMNS, on_bad_lines="error")
+    timestamp_parts = raw["metadata"].str.extract(TIMESTAMP_PATTERN)
+    raw["_event_time"] = pd.to_datetime(timestamp_parts.apply("-".join, axis=1), format="%Y-%m-%d-%H-%M-%S", errors="coerce")
+    if raw["_event_time"].isna().any():
+        raise ValueError("AMLNet contains rows without a parseable event timestamp.")
+    raw = raw.sort_values("_event_time", kind="stable")
+    reader = (raw.iloc[start:start + chunksize] for start in range(0, len(raw), chunksize))
     for chunk_number, chunk in enumerate(reader, start=1):
         for event in chunk.itertuples(index=False):
             event_hour = _as_hour(event.metadata, event.step, event.hour, event.day_of_week)

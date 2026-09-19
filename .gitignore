@@ -30,5 +30,6 @@ ml-service/models/*.pkl
 ml-service/data/raw/
 ml-service/analysis/data/
 ml-service/analysis/*.pkl
+ml-service/analysis/amlnet-experiment/model.pkl
 __pycache__/
 *.pyc

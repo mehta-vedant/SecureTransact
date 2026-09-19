@@ -1,0 +1,52 @@
+{
+  "model_version": "amlnet-payment-risk-experiment-v1",
+  "dataset": "AMLNet August 2025 (synthetic benchmark)",
+  "label": "isFraud",
+  "feature_schema": [
+    "amount",
+    "hour_of_day",
+    "day_of_week",
+    "amount_zscore",
+    "account_age_days",
+    "txn_count_1h",
+    "txn_count_24h",
+    "avg_amount_7d",
+    "unique_recipients_24h",
+    "is_cross_border",
+    "is_new_payee"
+  ],
+  "selected_model": "hist_gradient_boosting",
+  "validation_model_comparison": {
+    "logistic_regression": {
+      "pr_auc": 0.41489600907263685,
+      "brier_score": 0.0012015422550002996
+    },
+    "hist_gradient_boosting": {
+      "pr_auc": 0.4952175326033813,
+      "brier_score": 0.0009861747452225805
+    }
+  },
+  "rows": 1090172,
+  "fraud_rows": 1745,
+  "splits": {
+    "train": 654103,
+    "validation": 218034,
+    "test": 218035
+  },
+  "test": {
+    "positive_rate": 0.0013850987226821383,
+    "pr_auc": 0.48039452473684563,
+    "roc_auc": 0.9963334171084988,
+    "brier_score": 0.00083679114488913,
+    "operating_point": {
+      "target_precision": 0.1,
+      "threshold": 0.015306122448979591,
+      "recall": 0.9437086092715232
+    }
+  },
+  "limitations": [
+    "Synthetic benchmark; not representative production evidence.",
+    "No automatic payment decision may use this model.",
+    "Artifacts are intentionally not served by risk_scoring.py."
+  ]
+}
