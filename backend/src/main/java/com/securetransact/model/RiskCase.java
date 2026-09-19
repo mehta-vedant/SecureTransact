@@ -27,6 +27,13 @@ public class RiskCase {
     @Column(nullable = false)
     private CaseStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CasePriority priority;
+
+    @Version
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
@@ -50,5 +57,6 @@ public class RiskCase {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) status = CaseStatus.OPEN;
+        if (priority == null) priority = CasePriority.MEDIUM;
     }
 }

@@ -5,6 +5,7 @@ import com.securetransact.dto.RiskCaseResponse;
 import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.*;
 import com.securetransact.repository.RiskCaseRepository;
+import com.securetransact.repository.RiskCaseEventRepository;
 import com.securetransact.repository.TransactionRepository;
 import com.securetransact.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.*;
 class RiskCaseServiceTest {
 
     @Mock private RiskCaseRepository riskCaseRepository;
+    @Mock private RiskCaseEventRepository riskCaseEventRepository;
     @Mock private TransactionRepository transactionRepository;
     @Mock private UserRepository userRepository;
     @Mock private TransactionProcessor processor;

@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class RiskCaseResponse {
@@ -20,6 +21,8 @@ public class RiskCaseResponse {
     private String modelVersion;
     private BigDecimal anomalySignal;
     private CaseStatus status;
+    private String priority;
+    private List<RiskCaseEventResponse> timeline;
     private Long assignedToId;
     private String assignedToName;
     private String reviewNotes;
@@ -33,6 +36,7 @@ public class RiskCaseResponse {
         RiskCaseResponse response = new RiskCaseResponse();
         response.setId(rc.getId());
         response.setStatus(rc.getStatus());
+        response.setPriority(rc.getPriority() == null ? "MEDIUM" : rc.getPriority().name());
         response.setReviewNotes(rc.getReviewNotes());
         response.setAdminDecision(rc.getAdminDecision());
         response.setCreatedAt(rc.getCreatedAt());

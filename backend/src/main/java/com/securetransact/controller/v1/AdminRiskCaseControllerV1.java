@@ -51,4 +51,13 @@ public class AdminRiskCaseControllerV1 {
             @AuthenticationPrincipal CustomUserDetails admin) {
         return ResponseEntity.ok(riskCaseService.decideCase(caseId, request, admin.getId()));
     }
+
+    @PostMapping("/{caseId}/notes")
+    @Operation(summary = "Add an immutable timeline note to a risk case")
+    public ResponseEntity<RiskCaseResponse> addNote(
+            @PathVariable Long caseId,
+            @RequestBody java.util.Map<String, String> request,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        return ResponseEntity.ok(riskCaseService.addNote(caseId, request.get("note"), admin.getId()));
+    }
 }
