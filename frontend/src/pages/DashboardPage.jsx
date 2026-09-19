@@ -16,6 +16,7 @@ import TransactionTable from '../components/dashboard/TransactionTable';
 import { useToast } from '../components/common/Toast';
 import CreateAccountModal from '../components/dashboard/CreateAccountModal';
 import NewTransactionModal from '../components/dashboard/NewTransactionModal';
+import StatusBadge from '../components/dashboard/StatusBadge';
 
 /* ── helpers ─────────────────────────────────────── */
 function greeting() {
@@ -909,7 +910,7 @@ export default function DashboardPage() {
                             <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: isPos ? 'var(--success)' : 'var(--danger)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                               {isPos ? '+' : '-'}${Math.abs(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </td>
-                            <td style={{ padding: '10px 16px', fontSize: 11, color: 'var(--text-muted)' }}>{t.status}</td>
+                            <td style={{ padding: '10px 16px' }}><StatusBadge status={t.status} /></td>
                           </tr>
                         );
                       })}
