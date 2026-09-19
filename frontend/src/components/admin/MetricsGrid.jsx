@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeftRight, DollarSign, AlertTriangle, Users,
   CheckCircle, XCircle,
+  Inbox, Timer,
 } from 'lucide-react';
 
 function fmt(n) {
@@ -9,6 +10,25 @@ function fmt(n) {
 }
 
 const CARDS = [
+  {
+    key: 'openRiskCases',
+    label: 'Open Review Queue',
+    icon: Inbox,
+    color: 'var(--warning)',
+    bg: 'var(--warning-bg)',
+    format: (v) => v ?? 0,
+  },
+  {
+    key: 'oldestOpenCaseMinutes',
+    label: 'Oldest Case Age',
+    icon: Timer,
+    color: 'var(--danger)',
+    bg: 'var(--danger-bg)',
+    format: (v) => `${v ?? 0} min`,
+    accentWhen: (v) => v > 30,
+    accentColor: 'var(--danger)',
+    accentBg: 'var(--danger-bg)',
+  },
   {
     key: 'totalTransactionsToday',
     label: 'Transactions Today',

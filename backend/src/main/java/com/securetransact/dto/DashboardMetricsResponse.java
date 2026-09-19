@@ -16,4 +16,7 @@ public class DashboardMetricsResponse {
     private long activeAccounts;
     private long completedTransactionsToday;
     private long failedTransactionsToday;
+    private long openRiskCases;
+    private long criticalRiskCases;
+    private long oldestOpenCaseMinutes;
 }

@@ -1,6 +1,7 @@
 package com.securetransact.repository;
 
 import com.securetransact.model.CaseStatus;
+import com.securetransact.model.CasePriority;
 import com.securetransact.model.RiskCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,10 @@ public interface RiskCaseRepository extends JpaRepository<RiskCase, Long> {
     Page<RiskCase> findByStatusIn(@Param("statuses") List<CaseStatus> statuses, Pageable pageable);
 
     long countByStatus(CaseStatus status);
+
+    long countByPriorityAndStatusIn(CasePriority priority, List<CaseStatus> statuses);
+
+    Optional<RiskCase> findFirstByStatusInOrderByCreatedAtAsc(List<CaseStatus> statuses);
 
     @Query("SELECT COUNT(rc) FROM RiskCase rc WHERE rc.createdAt > :since")
     long countCreatedSince(@Param("since") java.time.LocalDateTime since);

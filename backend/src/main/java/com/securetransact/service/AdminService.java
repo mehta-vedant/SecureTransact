@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -34,6 +36,11 @@ public class AdminService {
 
     public DashboardMetricsResponse getDashboardMetrics() {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        List<CaseStatus> openCaseStatuses = List.of(CaseStatus.OPEN, CaseStatus.IN_REVIEW, CaseStatus.ESCALATED);
+        long openRiskCases = openCaseStatuses.stream().mapToLong(riskCaseRepository::countByStatus).sum();
+        long oldestOpenCaseMinutes = riskCaseRepository.findFirstByStatusInOrderByCreatedAtAsc(openCaseStatuses)
+                .map(caseItem -> Duration.between(caseItem.getCreatedAt(), LocalDateTime.now()).toMinutes())
+                .orElse(0L);
 
         return DashboardMetricsResponse.builder()
                 .totalTransactionsToday(transactionRepository.countTransactionsSince(startOfDay))
@@ -42,6 +49,9 @@ public class AdminService {
                 .completedTransactionsToday(transactionRepository.countByStatusSince(TransactionStatus.SETTLED, startOfDay))
                 .failedTransactionsToday(transactionRepository.countByStatusSince(TransactionStatus.FAILED, startOfDay))
                 .activeAccounts(accountRepository.countByStatus(AccountStatus.ACTIVE))
+                .openRiskCases(openRiskCases)
+                .criticalRiskCases(riskCaseRepository.countByPriorityAndStatusIn(CasePriority.CRITICAL, openCaseStatuses))
+                .oldestOpenCaseMinutes(oldestOpenCaseMinutes)
                 .build();
     }
 
