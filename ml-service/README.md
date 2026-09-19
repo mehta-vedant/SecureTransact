@@ -92,3 +92,19 @@ docker run -p 5001:5001 securetransact-ml
 - **Training**: Synthetic benign baseline only; this is a demo artifact, not a fraud model.
 - **Scoring**: Empirical percentile versus the benign training score distribution, not fraud probability.
 - **Swap-ready**: Real deployment requires representative payment data, calibration, and model governance.
+
+## Supervised benchmark experiment
+
+`securetransact_ml.train_amlnet` is the reproducible, offline experiment for
+AMLNet, a synthetic payment-network dataset. It derives the same 11 online-safe
+features used by the service from prior transaction history, then uses a temporal
+split, a class-balanced gradient-boosting model, and validation-window calibration.
+
+```bash
+python -m securetransact_ml.train_amlnet --input data/raw/AMLNet_August_2025.csv
+```
+
+The trained artifact is deliberately written to `analysis/amlnet-experiment/`,
+not `models/`, and is never used by `POST /score`. That boundary makes the demo
+safe: the current live signal remains optional, while the supervised result is
+measured and reviewed before any deployment decision.

@@ -49,26 +49,6 @@ def _anomaly_score_to_percentile(anomaly_score: float) -> tuple[int, str]:
     label = "ANOMALY_HIGH" if percentile >= 99 else "ANOMALY_ELEVATED" if percentile >= 95 else "NORMAL"
     return min(percentile, 100), label
 
-    """Convert IsolationForest decision_function to 0-100 risk score.
-
-    decision_function returns values where negative = anomaly.
-    We normalise to 0-100 where 100 = highest risk.
-    """
-    # decision_function typically ranges from -0.5 to 0.5
-    # Clamp and normalise: -0.5 → 100, 0.5 → 0
-    normalised = np.clip(-score, -0.5, 0.5)  # negate so anomaly = positive
-    risk = int((normalised / 0.5) * 100)
-    risk = max(0, min(100, risk))
-
-    if risk >= 80:
-        decision = "BLOCK"
-    elif risk >= 50:
-        decision = "HOLD_FOR_REVIEW"
-    else:
-        decision = "ALLOW"
-
-    return risk, decision
-
 
 def _validated_features(data: dict) -> TransactionFeatures:
     if not isinstance(data, dict):
